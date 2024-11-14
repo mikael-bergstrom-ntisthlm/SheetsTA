@@ -6,6 +6,11 @@
         "userSymbol": "Classroom",
         "version": "v1",
         "serviceId": "classroom"
+      },
+      {
+        "userSymbol": "DriveActivity",
+        "version": "v2",
+        "serviceId": "driveactivity"
       }
     ]
   },
@@ -17,6 +22,8 @@
     "https://www.googleapis.com/auth/classroom.rosters",
     "https://www.googleapis.com/auth/classroom.profile.emails",
     "https://www.googleapis.com/auth/classroom.coursework.students.readonly",
-    "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly"
+    "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly",
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive.activity.readonly"
   ]
 }
