@@ -1,3 +1,5 @@
+/// <reference path="./github.ts" />
+
 namespace ClassroomTA {
   export function GetRosterFromPairsTo(pairs: ClassroomIdentifiers[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
     let values: string[][] = [["Classroom", "CourseID", "Name", "Surname", "UserID"]];
