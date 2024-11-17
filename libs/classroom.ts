@@ -1,7 +1,7 @@
 /// <reference path="./github.ts" />
 
 namespace ClassroomTA {
-  export function GetRosterFromPairsTo(pairs: ClassroomIdentifiers[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
+  export function GetRosterFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
     let values: string[][] = [["Classroom", "CourseID", "Name", "Surname", "UserID"]];
 
     pairs.forEach(pair => {
@@ -42,7 +42,7 @@ namespace ClassroomTA {
     targetRange?.setValues(values);
   }
 
-  export function GetAssignmentsFromPairsTo(pairs: ClassroomIdentifiers[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
+  export function GetAssignmentsFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
     let values: string[][] = [["Title", "CourseID", "CourseworkID"]];
 
     pairs.forEach(pair => {
@@ -102,7 +102,7 @@ namespace ClassroomTA {
     targetRange?.setValues(values);
   }
 
-  export function GetStudentSubmissionsFromPairsTo(pairs: ClassroomIdentifiers[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
+  export function GetStudentSubmissionsFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
     let values: string[][] = [["UserID", "CourseID", "CourseworkID", "State", "Type", "Submission URL"]];
 
     pairs.forEach(pair => {
@@ -152,9 +152,9 @@ namespace ClassroomTA {
   // ----------------------------------------------------------------------------
   //  HELPERS
 
-  export function GetClassroomAndCourseworkIDPairs(range: GoogleAppsScript.Spreadsheet.Range): ClassroomIdentifiers[] {
+  export function GetClassroomAndCourseworkIDPairs(range: GoogleAppsScript.Spreadsheet.Range): ClassroomIdentifierPair[] {
 
-    let identifiers: ClassroomIdentifiers[] = [];
+    let identifiers: ClassroomIdentifierPair[] = [];
 
     let cellContents: string = range?.getValue();
 
@@ -173,7 +173,7 @@ namespace ClassroomTA {
     return identifiers;
   }
 
-  interface ClassroomIdentifiers {
+  export interface ClassroomIdentifierPair {
     courseID: string,
     courseworkID: string
   }

@@ -2,7 +2,8 @@ namespace GithubTA {
 
   export function InterpretURL(url: string): GitRepo | undefined {
 
-    const re = new RegExp("https?:\/\/github.com\/(?<user>.+?)\/(?<repo>.+?)[/.].*");
+    const re = new RegExp("https?:\/\/.*github.com\/(?<user>[^/]+)\/(?<repo>[^/]+)\/*.*$");
+    // https?:\/\/.*github.com\/(?<user>.+?)\/(?<repo>.+?)[\/$]*
 
     let result = re.exec(url)?.groups;
     if (!result) return undefined;
@@ -23,18 +24,16 @@ namespace GithubTA {
   }
 
   export function GetCommitDates(repo: GitRepo): Date[] {
-    let url = BuildApiRepoURL(repo);
-
-    // "https://api.github.com/repos/mikael-bergstrom-ntisthlm/GenericPlatformer/commits";
+    let url = BuildApiRepoURL(repo) + "/commits";
 
     let editTimestamps: Date[] = [];
 
     let response = UrlFetchApp.fetch(url);
     if (response.getResponseCode() == 200) {
       let commits: Commit[] = JSON.parse(response.getContentText()) as Commit[];
+      if (!commits) return [];
 
       commits.forEach(commit => {
-        Logger.log(commit.commit.author.date);
         editTimestamps.push(new Date(commit.commit.author.date));
       });
 

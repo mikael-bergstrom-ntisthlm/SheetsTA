@@ -1,7 +1,11 @@
-/// <reference path="./classroom.ts" />
-/// <reference path="./docs.ts" />
-/// <reference path="./github.ts" />
-/// <reference path="./sheets.ts" />
+/// <reference path="./libs/classroom.ts" />
+/// <reference path="./libs/docs.ts" />
+/// <reference path="./libs/github.ts" />
+/// <reference path="./libs/sheets.ts" />
+/// <reference path="./libs/utils.ts" />
+/// <reference path="./libs/master.ts" />
+
+
 
 function SheetsTA() {
   let ui = SpreadsheetApp.getUi();
@@ -16,7 +20,12 @@ function SheetsTA() {
     .addItem("Get document activity (weeks)", "Menu.GetDocActivityWeeks")
     .addItem("Get document activity (dates)", "Menu.GetDocActivityDates")
     .addSeparator()
+    .addItem("Get github repo activity (weeks)", "Menu.GetGithubRepoActivityWeeks")
     .addItem("Get github repo activity (dates)", "Menu.GetGithubRepoActivityDates")
+    .addSeparator()
+    .addItem("Setup entire document", "MasterDocument.Setup")
+    .addItem("Update document roster", "Menu.UpdateRoster")
+    .addItem("Update document submissions", "Menu.UpdateSubmissions")
     .addToUi();
 }
 
@@ -91,7 +100,7 @@ namespace Menu {
           String(row[1]) // User ID
         );
 
-        return GetUniqueDateStrings(dates, "w");
+        return Utils.GetUniqueDateStrings(dates, "w");
       })
   }
 
@@ -105,7 +114,7 @@ namespace Menu {
           String(row[1]) // User ID
         );
 
-        return GetUniqueDateStrings(dates, "yyyy-MM-dd");
+        return Utils.GetUniqueDateStrings(dates, "yyyy-MM-dd");
       })
   }
 
@@ -114,37 +123,70 @@ namespace Menu {
       1, "With github links",
       row => {
 
-        const repo = GithubTA.InterpretURL(String[row[0]])
+        const repo = GithubTA.InterpretURL(String(row[0]))
         if (repo == undefined) return []
-        
+
         const dates = GithubTA.GetCommitDates(repo);
-       
-        return GetUniqueDateStrings(dates, "yyyy-MM-dd");
+
+        return Utils.GetUniqueDateStrings(dates, "yyyy-MM-dd");
       }
     )
   }
+
+  export function GetGithubRepoActivityWeeks() {
+    SheetsUtilsTA.ProcessCurrentRange(
+      1, "With github links",
+      row => {
+
+        const repo = GithubTA.InterpretURL(String(row[0]))
+        if (repo == undefined) return []
+
+        const dates = GithubTA.GetCommitDates(repo);
+
+        return Utils.GetUniqueDateStrings(dates, "w");
+      }
+    )
+  }
+
+  export function UpdateRoster() {
+    let spreadsheet = SpreadsheetApp.getActive();
+    let setupSheet = spreadsheet.getSheetByName("_SETUP");
+    if (!setupSheet) {
+      SpreadsheetApp.getUi().alert("No _SETUP sheet found");
+      return;
+    }
+
+    // Gimmeh pairs
+    let pairs = MasterDocument.GetPairsFromSetupSheet(setupSheet);
+    if (!pairs) return;
+
+    // Rosterize
+    MasterDocument.UpdateSheet("_ROSTER", pairs, spreadsheet, ClassroomTA.GetRosterFromPairsTo);
+  }
+
+  export function UpdateSubmissions() {
+    let spreadsheet = SpreadsheetApp.getActive();
+    let setupSheet = spreadsheet.getSheetByName("_SETUP");
+    if (!setupSheet) {
+      SpreadsheetApp.getUi().alert("No _SETUP sheet found");
+      return;
+    }
+
+    // Gimmeh pairs
+    let pairs = MasterDocument.GetPairsFromSetupSheet(setupSheet);
+    if (!pairs) return;
+
+    // Get student submissions
+    MasterDocument.UpdateSheet("_SUBMISSIONS", pairs, spreadsheet, ClassroomTA.GetStudentSubmissionsFromPairsTo);
+  }
 }
 
-function GetUniqueDateStrings(dates: Date[], format: string)
-{
-  const dateStrings: Set<string> = new Set(
-    dates.map(date => {
-      return Utilities.formatDate(date, Session.getScriptTimeZone(), format);
-    })
-  );
-  return Array.from(dateStrings).sort();
+
+
+function Test() {
+
+
 }
-
-function Test()
-{
-  GithubTA.GetCommitDates({
-    user: "mikael-bergstrom-ntisthlm",
-    name: "GenericPlatformer/commits"
-  });
-}
-
-// https://developers.google.com/apps-script/guides/services/external
-
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
 
@@ -154,12 +196,10 @@ function Test()
 /* Implement:
 - Mass-processing
   x Document activity (dates|weeks)
-  - Github commits (dates|weeks)
+  x Github commits (dates|weeks)
 - Full setup of document incl sheets based on pairs in _SETUP sheet
   - Get pairs
   - Setup roster
   - Setup submissions
-- Get github activity
-  - return: list of dates
 - Github: Get direct link to Program.cs?
 */
