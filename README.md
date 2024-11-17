@@ -11,8 +11,26 @@ This is a highly opinionated set of scripts and functions for Google Sheets, aim
 
 Maybe this process will be simplified or better explained later. Don't hold your breath.
 
-## Usage
-(Not done yet)
+## Usage (not done)
+* Basics
+  * Getting list of active classrooms
+  * Get stuff from a classroom
+    * Roster
+    * Assignments
+  * Getting student submissions
+  * Sanitizing Github links
+* Document activity
+  * Getting docs activity [dates/weeks]
+  * Getting Github repo activity [dates/weeks]
+* Master document
+  * Setup/update everything
+  * Updating roster
+  * Updating submissions
 
-## Functionality
-(Not done yet)
+## Plans
+* Implementing the project as a proper standalone library?
+* Adding more grading support, with rubrics
+* More granular control over how and if to filter activity dates for github links (using email adresses? Adding email adresses to the roster?) and docs pages
+* Maybe some kind of optional subpages with readymade filters for github / docs submissions, and activity logging?
+* Maybe some sort of simplified/visual way to generate _CONFIG page for master document?
+* Finish this README / write some proper documentation
