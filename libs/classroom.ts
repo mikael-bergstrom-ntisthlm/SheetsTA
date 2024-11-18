@@ -2,7 +2,7 @@
 
 namespace ClassroomTA {
   export function GetRosterFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
-    let values: string[][] = [["Classroom", "CourseID", "Name", "Surname", "UserID"]];
+    let values: string[][] = [["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"]];
 
     pairs.forEach(pair => {
 
@@ -28,6 +28,7 @@ namespace ClassroomTA {
               pair.courseID,
               student.profile?.name?.givenName ?? "",
               student.profile?.name?.familyName ?? "",
+              student.profile?.emailAddress ?? "",
               student.profile?.id ?? ""
             ]
           )

@@ -1,17 +1,12 @@
 namespace SheetsUtilsTA {
   type RowProcessor = (row: any[]) => string[];
 
-  export function ProcessCurrentRange(expectedColumns: number, expectedColumnDesc: string, processor: RowProcessor) {
+  export function ProcessCurrentRange(processor: RowProcessor) {
     let sheet = SpreadsheetApp.getActiveSheet();
     let range = sheet.getActiveRange();
     if (!range) return;
 
     const values = range.getValues();
-
-    if (values[0].length != expectedColumns) {
-      SpreadsheetApp.getUi().alert("Expected exactly " + expectedColumns + " columns. " + expectedColumnDesc);
-      return;
-    }
 
     const colStart = range.getColumn();
     const rowStart = range.getRow();

@@ -1,5 +1,5 @@
 namespace DocsTA {
-  export function GetHistory(docUrl: string, userID: string): Date[] {
+  export function GetEditDates(docUrl: string, userID?: string): Date[] {
 
     let editTimestamps: Date[] = [];
     const document = DocumentApp.openByUrl(docUrl);
@@ -22,9 +22,8 @@ namespace DocsTA {
           || !activity.timestamp
         ) return;
 
-        Logger.log(actor.user.knownUser.personName);
-
-        if (actor.user.knownUser.personName === "people/" + userID) {
+        if (userID === undefined || actor.user.knownUser.personName === "people/" + userID)
+        {
           editTimestamps.push(new Date(activity.timestamp));
         }
       })

@@ -6,7 +6,6 @@
 /// <reference path="./libs/master.ts" />
 
 
-
 function SheetsTA() {
   let ui = SpreadsheetApp.getUi();
 
@@ -91,61 +90,19 @@ namespace Menu {
   }
 
   export function GetDocActivityWeeks() {
-    SheetsUtilsTA.ProcessCurrentRange(
-      2, "First with gdocs links, second with user IDs",
-      row => {
-
-        const dates = DocsTA.GetHistory(
-          String(row[0]), // DocURL
-          String(row[1]) // User ID
-        );
-
-        return Utils.GetUniqueDateStrings(dates, "w");
-      })
+    SheetsUtilsTA.ProcessCurrentRange(row => GetDocActivity(row, "w"));
   }
 
   export function GetDocActivityDates() {
-    SheetsUtilsTA.ProcessCurrentRange(
-      2, "First with gdocs links, second with user IDs to filter for",
-      row => {
-
-        const dates = DocsTA.GetHistory(
-          String(row[0]), // DocURL
-          String(row[1]) // User ID
-        );
-
-        return Utils.GetUniqueDateStrings(dates, "yyyy-MM-dd");
-      })
+    SheetsUtilsTA.ProcessCurrentRange(row => GetDocActivity(row, "yyyy-MM-dd"));
   }
 
   export function GetGithubRepoActivityDates() {
-    SheetsUtilsTA.ProcessCurrentRange(
-      1, "With github links",
-      row => {
-
-        const repo = GithubTA.InterpretURL(String(row[0]))
-        if (repo == undefined) return []
-
-        const dates = GithubTA.GetCommitDates(repo);
-
-        return Utils.GetUniqueDateStrings(dates, "yyyy-MM-dd");
-      }
-    )
+    SheetsUtilsTA.ProcessCurrentRange(row => GetGithubRepoActivity(row, "yyyy-MM-dd"));
   }
 
   export function GetGithubRepoActivityWeeks() {
-    SheetsUtilsTA.ProcessCurrentRange(
-      1, "With github links",
-      row => {
-
-        const repo = GithubTA.InterpretURL(String(row[0]))
-        if (repo == undefined) return []
-
-        const dates = GithubTA.GetCommitDates(repo);
-
-        return Utils.GetUniqueDateStrings(dates, "w");
-      }
-    )
+    SheetsUtilsTA.ProcessCurrentRange(row => GetGithubRepoActivity(row, "w"));
   }
 
   export function UpdateRoster() {
@@ -179,27 +136,39 @@ namespace Menu {
     // Get student submissions
     MasterDocument.UpdateSheet("_SUBMISSIONS", pairs, spreadsheet, ClassroomTA.GetStudentSubmissionsFromPairsTo);
   }
-}
 
 
+  function GetDocActivity(row: any[], format: string) {
 
-function Test() {
+    const dates = DocsTA.GetEditDates(
+      String(row[0]), // DocURL
+      row.length > 1 ? String(row[1]) : undefined // User ID
+    );
 
+    return Utils.GetUniqueDateStrings(dates, format);
+  }
 
+  function GetGithubRepoActivity(row: any[], format: string) {
+    const repo = GithubTA.InterpretURL(String(row[0]))
+    if (repo == undefined) return []
+
+    const dates = GithubTA.GetCommitDates(
+      repo,
+      row.length > 1 ? String(row[1]) : undefined
+    );
+
+    return Utils.GetUniqueDateStrings(dates, format);
+  }
 }
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
 
-// TODO: Make user ID / email filtering optional. Just one column? Great, just get everything then
-// TODO: Support multiple ID / email filters
-
 /* Implement:
-- Mass-processing
-  x Document activity (dates|weeks)
-  x Github commits (dates|weeks)
-- Full setup of document incl sheets based on pairs in _SETUP sheet
-  - Get pairs
-  - Setup roster
-  - Setup submissions
-- Github: Get direct link to Program.cs?
+- Grading support
+  - Generate grading page from current overview sheet
+    - Rubrics
+    - Checkboxes
+    - Dropdown student names + id
+  - Clear sheet
+  - Copy sheet data back to overview
 */

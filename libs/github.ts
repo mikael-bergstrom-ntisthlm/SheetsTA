@@ -16,14 +16,12 @@ namespace GithubTA {
 
   export function UrlSanitize(origUrl: string): string {
 
-    // origUrl = "https://github.com/TE22A-John-Julius/JuliusDiagnos/blob/main/Diagnos_Julius_John_TE22-s/Program.cs";
-
     let repo = InterpretURL(origUrl);
 
     return repo == undefined ? origUrl : BuildWebURL(repo);
   }
 
-  export function GetCommitDates(repo: GitRepo): Date[] {
+  export function GetCommitDates(repo: GitRepo, userEmail?:string): Date[] {
     let url = BuildApiRepoURL(repo) + "/commits";
 
     let editTimestamps: Date[] = [];
@@ -34,7 +32,10 @@ namespace GithubTA {
       if (!commits) return [];
 
       commits.forEach(commit => {
-        editTimestamps.push(new Date(commit.commit.author.date));
+        if (userEmail === undefined || commit.commit.author.email === userEmail)
+        {
+          editTimestamps.push(new Date(commit.commit.author.date));
+        }
       });
 
       return editTimestamps;
