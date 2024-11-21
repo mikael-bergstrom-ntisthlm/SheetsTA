@@ -5,8 +5,29 @@
 /// <reference path="./libs/utils.ts" />
 /// <reference path="./libs/master.ts" />
 
-
 function SheetsTA() {
+  let ui = SpreadsheetApp.getUi();
+
+  ui.createMenu("SheetsTA")
+    .addItem("Get list of active classrooms", "SheetsTA.Menu.GetClassrooms")
+    .addItem("Get roster from Classroom", "SheetsTA.Menu.GetRoster")
+    .addItem("Get list of assignments", "SheetsTA.Menu.GetAssignments")
+    .addItem("Get student submissions", "SheetsTA.Menu.GetStudentSubmissions")
+    .addItem("Sanitize Github URLs", "SheetsTA.Menu.SanitizeGithubURLs")
+    .addSeparator()
+    .addItem("Get document activity (weeks)", "SheetsTA.Menu.GetDocActivityWeeks")
+    .addItem("Get document activity (dates)", "SheetsTA.Menu.GetDocActivityDates")
+    .addSeparator()
+    .addItem("Get github repo activity (weeks)", "SheetsTA.Menu.GetGithubRepoActivityWeeks")
+    .addItem("Get github repo activity (dates)", "SheetsTA.Menu.GetGithubRepoActivityDates")
+    .addSeparator()
+    .addItem("Setup entire document", "SheetsTA.MasterDocument.Setup")
+    .addItem("Update document roster", "SheetsTA.Menu.UpdateRoster")
+    .addItem("Update document submissions", "SheetsTA.Menu.UpdateSubmissions")
+    .addToUi();
+}
+
+function SheetsTAInternal() {
   let ui = SpreadsheetApp.getUi();
 
   ui.createMenu("SheetsTA")
@@ -22,13 +43,16 @@ function SheetsTA() {
     .addItem("Get github repo activity (weeks)", "Menu.GetGithubRepoActivityWeeks")
     .addItem("Get github repo activity (dates)", "Menu.GetGithubRepoActivityDates")
     .addSeparator()
-    .addItem("Setup entire document", "MasterDocument.Setup")
-    .addItem("Update document roster", "Menu.UpdateRoster")
-    .addItem("Update document submissions", "Menu.UpdateSubmissions")
+    .addSubMenu(SpreadsheetApp.getUi().createMenu("Master document")
+      .addItem("Setup", "MasterDocument.Setup")
+      .addItem("Update roster", "Menu.UpdateRoster")
+      .addItem("Update submissions", "Menu.UpdateSubmissions")
+      .addItem("Update Git activity page", "Menu.UpdateGitPage")
+    )
     .addToUi();
 }
 
-namespace Menu {
+export namespace Menu {
   export function GetRoster() {
 
     let range = SpreadsheetApp.getActiveSheet().getActiveRange();
@@ -114,11 +138,12 @@ namespace Menu {
     }
 
     // Gimmeh pairs
-    let pairs = MasterDocument.GetPairsFromSetupSheet(setupSheet);
-    if (!pairs) return;
+    const config = MasterDocument.GetConfigFromSetupSheet(setupSheet);
+    if (!config?.pairs) return;
 
-    // Rosterize
-    MasterDocument.UpdateSheet("_ROSTER", pairs, spreadsheet, ClassroomTA.GetRosterFromPairsTo);
+    // Update roster
+    const rosterOrigo = MasterDocument.CreateOrUpdateSheet("_ROSTER", spreadsheet);
+    ClassroomTA.GetRosterFromPairsTo(config.pairs, rosterOrigo)
   }
 
   export function UpdateSubmissions() {
@@ -130,11 +155,24 @@ namespace Menu {
     }
 
     // Gimmeh pairs
-    let pairs = MasterDocument.GetPairsFromSetupSheet(setupSheet);
-    if (!pairs) return;
+    const config = MasterDocument.GetConfigFromSetupSheet(setupSheet);
+    if (!config?.pairs) return;
 
     // Get student submissions
-    MasterDocument.UpdateSheet("_SUBMISSIONS", pairs, spreadsheet, ClassroomTA.GetStudentSubmissionsFromPairsTo);
+    const submissionsOrigo = MasterDocument.CreateOrUpdateSheet("_SUBMISSIONS", spreadsheet);
+    ClassroomTA.GetStudentSubmissionsFromPairsTo(config.pairs, submissionsOrigo);
+  }
+
+  export function UpdateGitPage() {
+    let spreadsheet = SpreadsheetApp.getActive();
+    let setupSheet = spreadsheet.getSheetByName("_SETUP");
+    if (!setupSheet) {
+      SpreadsheetApp.getUi().alert("No _SETUP sheet found");
+      return;
+    }
+
+    let pairs = MasterDocument.GetConfigFromSetupSheet(setupSheet)?.pairs;
+    if (!pairs) return;
   }
 
 
@@ -163,12 +201,28 @@ namespace Menu {
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
 
+// TODO: Make MasterDocument.UpdateSheet return the content it just entered into the sheet? Also reference to A1 of that sheet?
+// TODO: Same with GetStudentSubmissionsFromPairsTo and similar
+// TODO: UpdateGitPage = update page, with a filtered version of submission data. Then run Get Activity.
+// TODO: Auto-run GitPage update when Submissions page updates, if it exists (same for drive. Make generic?)
+
 /* Implement:
+- Make submenus
+- Activity pages
+  - _SETUP support: git/drive, dates/weeks
 - Grading support
   - Generate grading page from current overview sheet
     - Rubrics
     - Checkboxes
     - Dropdown student names + id
+  - Copy student's info from overview
   - Clear sheet
   - Copy sheet data back to overview
+  - Generate overview sheet
+    - Based on template
+      - Extra info on each student
+        - Submission filter/join columns (with formulas)
+      - Source of rubrics: url
+- File management
+  - Naming files (Surname Name Assignment?)
 */

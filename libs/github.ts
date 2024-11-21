@@ -47,7 +47,7 @@ namespace GithubTA {
     `https://api.github.com/repos/${repo.user}/${repo.name}`;
 
   let BuildWebURL = (repo: GitRepo) =>
-    `https://www.github.com/${repo.user}/${repo.name}`;
+    `https://github.com/${repo.user}/${repo.name}`;
 
   interface GitRepo {
     user: string

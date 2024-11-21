@@ -2,5 +2,5 @@
 // a library
 
 function onOpen() {
-  SheetsTA();
+  SheetsTAInternal();
 }

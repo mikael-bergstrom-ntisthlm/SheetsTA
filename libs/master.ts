@@ -1,3 +1,6 @@
+/// <reference path="./classroom.ts" />
+
+
 namespace MasterDocument {
   export function Setup() {
     let spreadsheet = SpreadsheetApp.getActive();
@@ -8,21 +11,21 @@ namespace MasterDocument {
     }
 
     // Gimmeh pairs
-    let pairs = GetPairsFromSetupSheet(setupSheet);
-    if (!pairs) return;
+    let config = GetConfigFromSetupSheet(setupSheet);
+    if (!config || !config.pairs) return;
 
     // Rosterize
-    UpdateSheet("_ROSTER", pairs, spreadsheet, ClassroomTA.GetRosterFromPairsTo);
+    const rosterOrigo = CreateOrUpdateSheet("_ROSTER", spreadsheet);
+    ClassroomTA.GetRosterFromPairsTo(config.pairs, rosterOrigo);
 
     // Get student submissions
-    UpdateSheet("_SUBMISSIONS", pairs, spreadsheet, ClassroomTA.GetStudentSubmissionsFromPairsTo);
+    const submissionsOrigo = CreateOrUpdateSheet("_SUBMISSIONS", spreadsheet);
+    ClassroomTA.GetStudentSubmissionsFromPairsTo(config.pairs, rosterOrigo);
   }
 
-  export function UpdateSheet(
+  export function CreateOrUpdateSheet(
     sheetName: string,
-    pairs: ClassroomTA.ClassroomIdentifierPair[],
-    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
-    action: (pairs: ClassroomTA.ClassroomIdentifierPair[], origo: GoogleAppsScript.Spreadsheet.Range) => void) {
+    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet): GoogleAppsScript.Spreadsheet.Range {
 
     spreadsheet.toast("Updating " + sheetName);
 
@@ -35,26 +38,38 @@ namespace MasterDocument {
       sheet.clear();
     }
 
-    const origo = sheet.getRange(1, 1);
-
-    action(pairs, origo);
+    return sheet.getRange(1, 1);
   }
 
-  export function GetPairsFromSetupSheet(setupSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function GetConfigFromSetupSheet(setupSheet: GoogleAppsScript.Spreadsheet.Sheet) {
     let pairValues = setupSheet?.getRange("A1:B").getValues();
     if (!pairValues) return;
 
-    const pairs: ClassroomTA.ClassroomIdentifierPair[] = [];
+    const config: Config = {
+      gitFormat: "",
+      driveFormat: "",
+      pairs: []
+    }
+
+    // const pairs: ClassroomTA.ClassroomIdentifierPair[] = [];
 
     pairValues?.forEach(row => {
       if (row[0] == "" || row[1] == "") return;
 
-      pairs.push({
-        courseID: String(row[0]),
-        courseworkID: String(row[1])
-      });
+      // SpreadsheetApp.getUi().alert(String(isNaN(parseFloat(row[0])));
+      // All IDs are 100% numbers
+      if (!isNaN(parseFloat(row[0]))) {
+
+        config.pairs.push({
+          courseID: String(row[0]),
+          courseworkID: String(row[1])
+        });
+      }
+      else if (row[0] == "git")  {
+        // SpreadsheetApp.getUi().alert("git!");
+      }
     });
 
-    return pairs;
+    return config;
   }
 }

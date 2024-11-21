@@ -1,4 +1,6 @@
 /// <reference path="./github.ts" />
+/// <reference path="interfaces.ts" />
+
 
 namespace ClassroomTA {
   export function GetRosterFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
@@ -157,7 +159,7 @@ namespace ClassroomTA {
 
     let identifiers: ClassroomIdentifierPair[] = [];
 
-    let cellContents: string = range?.getValue();
+    let cellContents: string = String(range?.getValue());
 
     const pairs = cellContents.split(",");
 
@@ -172,11 +174,6 @@ namespace ClassroomTA {
     });
 
     return identifiers;
-  }
-
-  export interface ClassroomIdentifierPair {
-    courseID: string,
-    courseworkID: string
   }
 
   export function GetAttachmentType(attachment: GoogleAppsScript.Classroom.Schema.Attachment) {
