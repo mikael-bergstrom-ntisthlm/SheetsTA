@@ -16,11 +16,13 @@ namespace MasterDocument {
 
     // Rosterize
     const rosterOrigo = CreateOrUpdateSheet("_ROSTER", spreadsheet);
-    ClassroomTA.GetRosterFromPairsTo(config.pairs, rosterOrigo);
+    const rosterValues = ClassroomTA.GetRoster(config);
+    SheetsTA.InsertValuesAt(rosterValues, rosterOrigo);
 
     // Get student submissions
     const submissionsOrigo = CreateOrUpdateSheet("_SUBMISSIONS", spreadsheet);
-    ClassroomTA.GetStudentSubmissionsFromPairsTo(config.pairs, rosterOrigo);
+    const submissionValues = ClassroomTA.GetStudentSubmissions(config);
+    SheetsTA.InsertValuesAt(submissionValues, submissionsOrigo);
   }
 
   export function CreateOrUpdateSheet(
@@ -51,12 +53,9 @@ namespace MasterDocument {
       pairs: []
     }
 
-    // const pairs: ClassroomTA.ClassroomIdentifierPair[] = [];
-
     pairValues?.forEach(row => {
       if (row[0] == "" || row[1] == "") return;
 
-      // SpreadsheetApp.getUi().alert(String(isNaN(parseFloat(row[0])));
       // All IDs are 100% numbers
       if (!isNaN(parseFloat(row[0]))) {
 
@@ -65,8 +64,11 @@ namespace MasterDocument {
           courseworkID: String(row[1])
         });
       }
-      else if (row[0] == "git")  {
-        // SpreadsheetApp.getUi().alert("git!");
+      else if (row[0] == "git") {
+        config.gitFormat = row[1];
+      }
+      else if (row[0] == "drive") {
+        config.driveFormat = row[1];
       }
     });
 

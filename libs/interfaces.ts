@@ -4,12 +4,11 @@ interface InsertedValues {
 }
 
 interface Config {
-  gitFormat: string | undefined,
-  driveFormat: string | undefined,
-  pairs: ClassroomIdentifierPair[]
-}
-
-interface ClassroomIdentifierPair {
-  courseID: string,
-  courseworkID: string
+  gitFormat?: string,
+  driveFormat?: string,
+  pairs:
+  {
+    courseID: string,
+    courseworkID: string
+  }[]
 }

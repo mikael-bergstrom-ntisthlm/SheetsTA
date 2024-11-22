@@ -3,10 +3,10 @@
 
 
 namespace ClassroomTA {
-  export function GetRosterFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
+  export function GetRoster(config: Config) {
     let values: string[][] = [["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"]];
 
-    pairs.forEach(pair => {
+    config.pairs.forEach(pair => {
 
       const classroomName = Classroom.Courses?.get(pair.courseID).name ?? "unnamed classroom";
 
@@ -41,14 +41,13 @@ namespace ClassroomTA {
       } while (nextPageToken != "");
     });
 
-    let targetRange = targetRangeStart?.offset(0, 0, values.length, values[0].length);
-    targetRange?.setValues(values);
+    return values;
   }
 
-  export function GetAssignmentsFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
+  export function GetAssignments(config: Config): string[][] {
     let values: string[][] = [["Title", "CourseID", "CourseworkID"]];
 
-    pairs.forEach(pair => {
+    config.pairs.forEach(pair => {
 
       const assignments = Classroom.Courses?.CourseWork?.list(pair.courseID);
       if (assignments?.courseWork == undefined) {
@@ -67,8 +66,7 @@ namespace ClassroomTA {
       });
     });
 
-    let targetRange = targetRangeStart?.offset(0, 0, values.length, values[0].length);
-    targetRange?.setValues(values);
+    return values;
   }
 
   export function GetClassroomsTo(targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
@@ -105,10 +103,10 @@ namespace ClassroomTA {
     targetRange?.setValues(values);
   }
 
-  export function GetStudentSubmissionsFromPairsTo(pairs: ClassroomIdentifierPair[], targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
+  export function GetStudentSubmissions(config: Config): string[][] {
     let values: string[][] = [["UserID", "CourseID", "CourseworkID", "State", "Type", "Submission URL"]];
 
-    pairs.forEach(pair => {
+    config.pairs.forEach(pair => {
 
       let nextPageToken: string = "";
 
@@ -147,17 +145,17 @@ namespace ClassroomTA {
 
     })
 
-    let targetRange = targetRangeStart?.offset(0, 0, values.length, values[0].length);
-    targetRange?.setValues(values);
-
+    return values;
   }
 
   // ----------------------------------------------------------------------------
   //  HELPERS
 
-  export function GetClassroomAndCourseworkIDPairs(range: GoogleAppsScript.Spreadsheet.Range): ClassroomIdentifierPair[] {
+  export function GetConfigFromRange(range: GoogleAppsScript.Spreadsheet.Range): Config {
 
-    let identifiers: ClassroomIdentifierPair[] = [];
+    const config: Config = {
+      pairs: []
+    }
 
     let cellContents: string = String(range?.getValue());
 
@@ -165,7 +163,7 @@ namespace ClassroomTA {
 
     pairs.forEach(pair => {
       const pairSeparated = pair.split("/");
-      identifiers.push(
+      config.pairs.push(
         {
           courseID: pairSeparated[0].trim(),
           courseworkID: pairSeparated.length > 1 ? pairSeparated[1].trim() : ""
@@ -173,7 +171,7 @@ namespace ClassroomTA {
       )
     });
 
-    return identifiers;
+    return config;
   }
 
   export function GetAttachmentType(attachment: GoogleAppsScript.Classroom.Schema.Attachment) {

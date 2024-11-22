@@ -5,63 +5,45 @@
 /// <reference path="./libs/utils.ts" />
 /// <reference path="./libs/master.ts" />
 
-function SheetsTA() {
-  let ui = SpreadsheetApp.getUi();
-
-  ui.createMenu("SheetsTA")
-    .addItem("Get list of active classrooms", "SheetsTA.Menu.GetClassrooms")
-    .addItem("Get roster from Classroom", "SheetsTA.Menu.GetRoster")
-    .addItem("Get list of assignments", "SheetsTA.Menu.GetAssignments")
-    .addItem("Get student submissions", "SheetsTA.Menu.GetStudentSubmissions")
-    .addItem("Sanitize Github URLs", "SheetsTA.Menu.SanitizeGithubURLs")
-    .addSeparator()
-    .addItem("Get document activity (weeks)", "SheetsTA.Menu.GetDocActivityWeeks")
-    .addItem("Get document activity (dates)", "SheetsTA.Menu.GetDocActivityDates")
-    .addSeparator()
-    .addItem("Get github repo activity (weeks)", "SheetsTA.Menu.GetGithubRepoActivityWeeks")
-    .addItem("Get github repo activity (dates)", "SheetsTA.Menu.GetGithubRepoActivityDates")
-    .addSeparator()
-    .addItem("Setup entire document", "SheetsTA.MasterDocument.Setup")
-    .addItem("Update document roster", "SheetsTA.Menu.UpdateRoster")
-    .addItem("Update document submissions", "SheetsTA.Menu.UpdateSubmissions")
-    .addToUi();
-}
-
-function SheetsTAInternal() {
-  let ui = SpreadsheetApp.getUi();
-
-  ui.createMenu("SheetsTA")
-    .addItem("Get list of active classrooms", "Menu.GetClassrooms")
-    .addItem("Get roster from Classroom", "Menu.GetRoster")
-    .addItem("Get list of assignments", "Menu.GetAssignments")
-    .addItem("Get student submissions", "Menu.GetStudentSubmissions")
-    .addItem("Sanitize Github URLs", "Menu.SanitizeGithubURLs")
-    .addSeparator()
-    .addItem("Get document activity (weeks)", "Menu.GetDocActivityWeeks")
-    .addItem("Get document activity (dates)", "Menu.GetDocActivityDates")
-    .addSeparator()
-    .addItem("Get github repo activity (weeks)", "Menu.GetGithubRepoActivityWeeks")
-    .addItem("Get github repo activity (dates)", "Menu.GetGithubRepoActivityDates")
-    .addSeparator()
-    .addSubMenu(SpreadsheetApp.getUi().createMenu("Master document")
-      .addItem("Setup", "MasterDocument.Setup")
-      .addItem("Update roster", "Menu.UpdateRoster")
-      .addItem("Update submissions", "Menu.UpdateSubmissions")
-      .addItem("Update Git activity page", "Menu.UpdateGitPage")
-    )
-    .addToUi();
-}
+function SheetsTASetup() { Menu.Setup("SheetsTA."); }
+function SheetsTAInternal() { Menu.Setup(""); }
 
 export namespace Menu {
+  export function Setup(prefix: string) {
+    let ui = SpreadsheetApp.getUi();
+  
+    ui.createMenu("SheetsTA")
+      .addItem("Get list of active classrooms", prefix + "Menu.GetClassrooms")
+      .addItem("Get roster from Classroom", prefix + "Menu.GetRoster")
+      .addItem("Get list of assignments", prefix + "Menu.GetAssignments")
+      .addItem("Get student submissions", prefix + "Menu.GetStudentSubmissions")
+      .addItem("Sanitize Github URLs", prefix + "Menu.SanitizeGithubURLs")
+      .addSeparator()
+      .addItem("Get document activity (weeks)", prefix + "Menu.GetDocActivityWeeks")
+      .addItem("Get document activity (dates)", prefix + "Menu.GetDocActivityDates")
+      .addSeparator()
+      .addItem("Get github repo activity (weeks)", prefix + "Menu.GetGithubRepoActivityWeeks")
+      .addItem("Get github repo activity (dates)", prefix + "Menu.GetGithubRepoActivityDates")
+      .addSeparator()
+      .addSubMenu(SpreadsheetApp.getUi().createMenu("Master document")
+        .addItem("Setup", prefix + "MasterDocument.Setup")
+        .addItem("Update roster", prefix + "Menu.UpdateRoster")
+        .addItem("Update submissions", prefix + "Menu.UpdateSubmissions")
+        .addItem("Update Git activity page", prefix + "Menu.UpdateGitPage")
+      )
+      .addToUi();
+  }
+
   export function GetRoster() {
 
     let range = SpreadsheetApp.getActiveSheet().getActiveRange();
     if (!range) return;
 
-    let pairs = ClassroomTA.GetClassroomAndCourseworkIDPairs(range);
-    let targetRangeStart = range.offset(range.getHeight(), 0, 1, 1);
+    const config = ClassroomTA.GetConfigFromRange(range);
+    let rosterOrigo = range.offset(range.getHeight(), 0, 1, 1);
 
-    ClassroomTA.GetRosterFromPairsTo(pairs, targetRangeStart)
+    const values = ClassroomTA.GetRoster(config);
+    SheetsTA.InsertValuesAt(values, rosterOrigo);
   }
 
   export function GetStudentSubmissions() {
@@ -69,27 +51,28 @@ export namespace Menu {
     const range = SpreadsheetApp.getActiveSheet().getActiveRange();
     if (!range) return;
 
-    let pairs = ClassroomTA.GetClassroomAndCourseworkIDPairs(range);
+    let config = ClassroomTA.GetConfigFromRange(range);
 
-    if (pairs.length < 1 || pairs[0].courseID == "" || pairs[0].courseworkID == "") {
+    if (config.pairs.length < 1 || config.pairs[0].courseID == "" || config.pairs[0].courseworkID == "") {
       SpreadsheetApp.getUi().alert("Expected one or more course/assignment pair in selected cell");
       return;
     }
 
-    let targetRangeStart = range.offset(range.getHeight(), 0, 1, 1);
+    let submissionsSheetOrigo = range.offset(range.getHeight(), 0, 1, 1);
 
-    ClassroomTA.GetStudentSubmissionsFromPairsTo(pairs, targetRangeStart);
-
+    const values = ClassroomTA.GetStudentSubmissions(config);
+    SheetsTA.InsertValuesAt(values, submissionsSheetOrigo);
   }
 
   export function GetAssignments() {
     const range = SpreadsheetApp.getActiveSheet().getActiveRange();
     if (!range) return;
 
-    let pairs = ClassroomTA.GetClassroomAndCourseworkIDPairs(range);
-    let targetRangeStart = range.offset(range.getHeight(), 0, 1, 1);
+    let config = ClassroomTA.GetConfigFromRange(range);
+    let assignmentsSheetOrigo = range.offset(range.getHeight(), 0, 1, 1);
 
-    ClassroomTA.GetAssignmentsFromPairsTo(pairs, targetRangeStart);
+    const values = ClassroomTA.GetAssignments(config);
+    SheetsTA.InsertValuesAt(values, assignmentsSheetOrigo);
   }
 
   export function GetClassrooms() {
@@ -114,19 +97,19 @@ export namespace Menu {
   }
 
   export function GetDocActivityWeeks() {
-    SheetsUtilsTA.ProcessCurrentRange(row => GetDocActivity(row, "w"));
+    SheetsTA.ProcessCurrentRange(row => GetDocActivity(row, "w"));
   }
 
   export function GetDocActivityDates() {
-    SheetsUtilsTA.ProcessCurrentRange(row => GetDocActivity(row, "yyyy-MM-dd"));
+    SheetsTA.ProcessCurrentRange(row => GetDocActivity(row, "yyyy-MM-dd"));
   }
 
   export function GetGithubRepoActivityDates() {
-    SheetsUtilsTA.ProcessCurrentRange(row => GetGithubRepoActivity(row, "yyyy-MM-dd"));
+    SheetsTA.ProcessCurrentRange(row => GetGithubRepoActivity(row, "yyyy-MM-dd"));
   }
 
   export function GetGithubRepoActivityWeeks() {
-    SheetsUtilsTA.ProcessCurrentRange(row => GetGithubRepoActivity(row, "w"));
+    SheetsTA.ProcessCurrentRange(row => GetGithubRepoActivity(row, "w"));
   }
 
   export function UpdateRoster() {
@@ -143,7 +126,8 @@ export namespace Menu {
 
     // Update roster
     const rosterOrigo = MasterDocument.CreateOrUpdateSheet("_ROSTER", spreadsheet);
-    ClassroomTA.GetRosterFromPairsTo(config.pairs, rosterOrigo)
+    const values = ClassroomTA.GetRoster(config)
+    SheetsTA.InsertValuesAt(values, rosterOrigo);
   }
 
   export function UpdateSubmissions() {
@@ -154,13 +138,14 @@ export namespace Menu {
       return;
     }
 
-    // Gimmeh pairs
+    // Gimmeh config
     const config = MasterDocument.GetConfigFromSetupSheet(setupSheet);
     if (!config?.pairs) return;
 
     // Get student submissions
     const submissionsOrigo = MasterDocument.CreateOrUpdateSheet("_SUBMISSIONS", spreadsheet);
-    ClassroomTA.GetStudentSubmissionsFromPairsTo(config.pairs, submissionsOrigo);
+    const values = ClassroomTA.GetStudentSubmissions(config);
+    SheetsTA.InsertValuesAt(values, submissionsOrigo);
   }
 
   export function UpdateGitPage() {
@@ -171,8 +156,8 @@ export namespace Menu {
       return;
     }
 
-    let pairs = MasterDocument.GetConfigFromSetupSheet(setupSheet)?.pairs;
-    if (!pairs) return;
+    let config = MasterDocument.GetConfigFromSetupSheet(setupSheet);
+    if (!config?.pairs) return;
   }
 
 
@@ -201,8 +186,6 @@ export namespace Menu {
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
 
-// TODO: Make MasterDocument.UpdateSheet return the content it just entered into the sheet? Also reference to A1 of that sheet?
-// TODO: Same with GetStudentSubmissionsFromPairsTo and similar
 // TODO: UpdateGitPage = update page, with a filtered version of submission data. Then run Get Activity.
 // TODO: Auto-run GitPage update when Submissions page updates, if it exists (same for drive. Make generic?)
 
