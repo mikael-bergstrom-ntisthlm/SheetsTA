@@ -127,7 +127,7 @@ namespace ClassroomTA {
 
             const attachmentUrl = attachment.driveFile?.alternateLink ?? attachment.link?.url ?? attachment.youTubeVideo?.alternateLink ?? "unknown url";
             let attachmentType = GetAttachmentType(attachment)
-
+            
             values.push([
               submission.userId ?? "",
               pair.courseID,

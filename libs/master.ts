@@ -1,50 +1,75 @@
 /// <reference path="./classroom.ts" />
+/// <reference path="./sheets.ts" />
 
+function TestMaster() {
+  MasterDocument.Setup();
+}
 
 namespace MasterDocument {
   export function Setup() {
+
     let spreadsheet = SpreadsheetApp.getActive();
+    let masterConfig = GetMasterConfig(spreadsheet);
+    if (!masterConfig || !masterConfig.pairs) return;
+
+    // Rosterize
+    UpdateRoster(masterConfig, spreadsheet);
+
+    // Update submissions
+    UpdateSubmissions(masterConfig, spreadsheet);
+  }
+
+  export function GetMasterConfig(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet)
+  {
     let setupSheet = spreadsheet.getSheetByName("_SETUP");
     if (!setupSheet) {
       SpreadsheetApp.getUi().alert("No _SETUP sheet found");
       return;
     }
 
-    // Gimmeh pairs
-    let config = GetConfigFromSetupSheet(setupSheet);
-    if (!config || !config.pairs) return;
-
-    // Rosterize
-    const rosterOrigo = CreateOrUpdateSheet("_ROSTER", spreadsheet);
-    const rosterValues = ClassroomTA.GetRoster(config);
-    SheetsTA.InsertValuesAt(rosterValues, rosterOrigo);
-
-    // Get student submissions
-    const submissionsOrigo = CreateOrUpdateSheet("_SUBMISSIONS", spreadsheet);
-    const submissionValues = ClassroomTA.GetStudentSubmissions(config);
-    SheetsTA.InsertValuesAt(submissionValues, submissionsOrigo);
+    return GetConfigFromSetupSheet(setupSheet);
   }
 
-  export function CreateOrUpdateSheet(
-    sheetName: string,
-    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet): GoogleAppsScript.Spreadsheet.Range {
+  export function UpdateRoster(masterConfig: Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
+    const rosterOrigo = SheetsTA.CreateOrGetSheet("_ROSTER", spreadsheet).getRange(1, 1);
+    const rosterValues = ClassroomTA.GetRoster(masterConfig);
+    SheetsTA.InsertValuesAt(rosterValues, rosterOrigo);
+  }
 
-    spreadsheet.toast("Updating " + sheetName);
+  export function UpdateSubmissions(masterConfig: Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
+    
+    // Split into multiple config based on target sheet
+    const configs: Map<string, Config> = ConfigSplitByTargetSheet(masterConfig);
 
-    let sheet = spreadsheet.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = spreadsheet.insertSheet(sheetName);
-      sheet.setFrozenRows(1);
-    }
-    else {
-      sheet.clear();
-    }
+    configs.forEach((config, targetSheet) => {
 
-    return sheet.getRange(1, 1);
+      // Get student submissions
+      const submissionValues = ClassroomTA.GetStudentSubmissions(config);
+      const submissionsOrigo = SheetsTA.CreateOrGetSheet(targetSheet, spreadsheet).getRange(1, 1);
+
+      SheetsTA.InsertValuesAt(submissionValues, submissionsOrigo);
+    });
+  }
+
+  function ConfigSplitByTargetSheet(masterConfig: Config) {
+    const configs: Map<string, Config> = new Map();
+
+    masterConfig.pairs.forEach(pair => {
+      let key = pair.targetSheetName;
+
+      if (key === "") key = "_SUBMISSIONS";
+
+      // Key missing? Add it, with an empty config
+      if (!configs.has(key)) configs.set(key, { pairs: [] });
+
+      configs.get(key)?.pairs.push(pair);
+    });
+
+    return configs;
   }
 
   export function GetConfigFromSetupSheet(setupSheet: GoogleAppsScript.Spreadsheet.Sheet) {
-    let pairValues = setupSheet?.getRange("A1:B").getValues();
+    let pairValues = setupSheet?.getRange("A1:C").getValues();
     if (!pairValues) return;
 
     const config: Config = {
@@ -61,7 +86,8 @@ namespace MasterDocument {
 
         config.pairs.push({
           courseID: String(row[0]),
-          courseworkID: String(row[1])
+          courseworkID: String(row[1]),
+          targetSheetName: String(row[2])
         });
       }
       else if (row[0] == "git") {

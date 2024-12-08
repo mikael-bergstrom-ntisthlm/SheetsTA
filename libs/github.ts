@@ -17,7 +17,7 @@ namespace GithubTA {
   export function UrlSanitize(origUrl: string): string {
 
     let repo = InterpretURL(origUrl);
-
+    
     return repo == undefined ? origUrl : BuildWebURL(repo);
   }
 
@@ -43,11 +43,13 @@ namespace GithubTA {
     return [];
   }
 
-  let BuildApiRepoURL = (repo: GitRepo) =>
-    `https://api.github.com/repos/${repo.user}/${repo.name}`;
+  function BuildApiRepoURL(repo: GitRepo) {
+    return `https://api.github.com/repos/${repo.user}/${repo.name}`;
+  }
 
-  let BuildWebURL = (repo: GitRepo) =>
-    `https://github.com/${repo.user}/${repo.name}`;
+  export function BuildWebURL(repo: GitRepo) {
+    return `https://github.com/${repo.user}/${repo.name}`;
+  }
 
   interface GitRepo {
     user: string

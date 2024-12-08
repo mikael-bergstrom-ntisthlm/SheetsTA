@@ -4,6 +4,8 @@
 /// <reference path="./libs/sheets.ts" />
 /// <reference path="./libs/utils.ts" />
 /// <reference path="./libs/master.ts" />
+/// <reference path="./libs/rubrics.ts" />
+
 
 function SheetsTASetup() { Menu.Setup("SheetsTA."); }
 function SheetsTAInternal() { Menu.Setup(""); }
@@ -11,25 +13,24 @@ function SheetsTAInternal() { Menu.Setup(""); }
 export namespace Menu {
   export function Setup(prefix: string) {
     let ui = SpreadsheetApp.getUi();
-  
+
     ui.createMenu("SheetsTA")
       .addItem("Get list of active classrooms", prefix + "Menu.GetClassrooms")
       .addItem("Get roster from Classroom", prefix + "Menu.GetRoster")
       .addItem("Get list of assignments", prefix + "Menu.GetAssignments")
       .addItem("Get student submissions", prefix + "Menu.GetStudentSubmissions")
       .addItem("Sanitize Github URLs", prefix + "Menu.SanitizeGithubURLs")
-      .addSeparator()
-      .addItem("Get document activity (weeks)", prefix + "Menu.GetDocActivityWeeks")
-      .addItem("Get document activity (dates)", prefix + "Menu.GetDocActivityDates")
-      .addSeparator()
-      .addItem("Get github repo activity (weeks)", prefix + "Menu.GetGithubRepoActivityWeeks")
-      .addItem("Get github repo activity (dates)", prefix + "Menu.GetGithubRepoActivityDates")
-      .addSeparator()
+      .addSubMenu(SpreadsheetApp.getUi().createMenu("Activity tracking")
+        .addItem("Get document activity (weeks)", prefix + "Menu.GetDocActivityWeeks")
+        .addItem("Get document activity (dates)", prefix + "Menu.GetDocActivityDates")
+        .addSeparator()
+        .addItem("Get github repo activity (weeks)", prefix + "Menu.GetGithubRepoActivityWeeks")
+        .addItem("Get github repo activity (dates)", prefix + "Menu.GetGithubRepoActivityDates")
+      )
       .addSubMenu(SpreadsheetApp.getUi().createMenu("Master document")
         .addItem("Setup", prefix + "MasterDocument.Setup")
         .addItem("Update roster", prefix + "Menu.UpdateRoster")
         .addItem("Update submissions", prefix + "Menu.UpdateSubmissions")
-        .addItem("Update Git activity page", prefix + "Menu.UpdateGitPage")
       )
       .addToUi();
   }
@@ -114,52 +115,24 @@ export namespace Menu {
 
   export function UpdateRoster() {
     let spreadsheet = SpreadsheetApp.getActive();
-    let setupSheet = spreadsheet.getSheetByName("_SETUP");
-    if (!setupSheet) {
-      SpreadsheetApp.getUi().alert("No _SETUP sheet found");
-      return;
-    }
 
-    // Gimmeh pairs
-    const config = MasterDocument.GetConfigFromSetupSheet(setupSheet);
-    if (!config?.pairs) return;
+    let masterConfig = MasterDocument.GetMasterConfig(spreadsheet);
+    if (!masterConfig || !masterConfig.pairs) return;
 
-    // Update roster
-    const rosterOrigo = MasterDocument.CreateOrUpdateSheet("_ROSTER", spreadsheet);
-    const values = ClassroomTA.GetRoster(config)
-    SheetsTA.InsertValuesAt(values, rosterOrigo);
+    // Rosterize
+    MasterDocument.UpdateRoster(masterConfig, spreadsheet);
   }
 
   export function UpdateSubmissions() {
     let spreadsheet = SpreadsheetApp.getActive();
-    let setupSheet = spreadsheet.getSheetByName("_SETUP");
-    if (!setupSheet) {
-      SpreadsheetApp.getUi().alert("No _SETUP sheet found");
-      return;
-    }
 
-    // Gimmeh config
-    const config = MasterDocument.GetConfigFromSetupSheet(setupSheet);
-    if (!config?.pairs) return;
+    let masterConfig = MasterDocument.GetMasterConfig(spreadsheet);
+    if (!masterConfig || !masterConfig.pairs) return;
 
-    // Get student submissions
-    const submissionsOrigo = MasterDocument.CreateOrUpdateSheet("_SUBMISSIONS", spreadsheet);
-    const values = ClassroomTA.GetStudentSubmissions(config);
-    SheetsTA.InsertValuesAt(values, submissionsOrigo);
+    // Update submissions
+    MasterDocument.UpdateSubmissions(masterConfig, spreadsheet);
+
   }
-
-  export function UpdateGitPage() {
-    let spreadsheet = SpreadsheetApp.getActive();
-    let setupSheet = spreadsheet.getSheetByName("_SETUP");
-    if (!setupSheet) {
-      SpreadsheetApp.getUi().alert("No _SETUP sheet found");
-      return;
-    }
-
-    let config = MasterDocument.GetConfigFromSetupSheet(setupSheet);
-    if (!config?.pairs) return;
-  }
-
 
   function GetDocActivity(row: any[], format: string) {
 
@@ -171,7 +144,7 @@ export namespace Menu {
     return Utils.GetUniqueDateStrings(dates, format);
   }
 
-  function GetGithubRepoActivity(row: any[], format: string) {
+  function GetGithubRepoActivity(row: any[], format: string): string[] {
     const repo = GithubTA.InterpretURL(String(row[0]))
     if (repo == undefined) return []
 
@@ -186,18 +159,15 @@ export namespace Menu {
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
 
-// TODO: UpdateGitPage = update page, with a filtered version of submission data. Then run Get Activity.
-// TODO: Auto-run GitPage update when Submissions page updates, if it exists (same for drive. Make generic?)
+// TODO: Fix structure for generating grading page
 
 /* Implement:
-- Make submenus
-- Activity pages
-  - _SETUP support: git/drive, dates/weeks
+x Make submenus
 - Grading support
   - Generate grading page from current overview sheet
-    - Rubrics
-    - Checkboxes
-    - Dropdown student names + id
+    x Rubrics
+    x Checkboxes
+    x Dropdown student names + id
   - Copy student's info from overview
   - Clear sheet
   - Copy sheet data back to overview
@@ -208,4 +178,7 @@ export namespace Menu {
       - Source of rubrics: url
 - File management
   - Naming files (Surname Name Assignment?)
+- Moar git
+  - Handle github access token
+  - _GIT activity page
 */

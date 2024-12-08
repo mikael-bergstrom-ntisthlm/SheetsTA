@@ -1,6 +1,6 @@
 namespace SheetsTA {
   type RowProcessor = (row: any[]) => string[];
-  
+
   export function ProcessCurrentRange(processor: RowProcessor) {
     let sheet = SpreadsheetApp.getActiveSheet();
     let range = sheet.getActiveRange();
@@ -23,7 +23,41 @@ namespace SheetsTA {
   }
 
   export function InsertValuesAt(values: string[][], origo: GoogleAppsScript.Spreadsheet.Range) {
-    let targetRange = origo?.offset(0, 0, values.length, values[0].length);
+
+    let maxWidth = values[0].length;
+    values.forEach(row => { maxWidth = Math.max(maxWidth, row.length) });
+
+    let targetRange = origo?.offset(0, 0, values.length, maxWidth);
     targetRange?.setValues(values);
+  }
+
+  export function CreateOrGetSheet(
+    sheetName: string,
+    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet): GoogleAppsScript.Spreadsheet.Sheet {
+
+    spreadsheet.toast("Updating " + sheetName);
+
+    let sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(sheetName);
+      sheet.setFrozenRows(1);
+    }
+    else {
+      sheet.clear();
+    }
+
+    return sheet;
+  }
+
+  export function GetColumnNum(columnHeading: string, sheet: GoogleAppsScript.Spreadsheet.Sheet, headingRowNumber: number): number {
+
+    const headingRow = sheet.getRange(headingRowNumber, 1, 1, sheet.getMaxColumns())
+    const headingRowValues = headingRow.getValues()[0];
+
+    for (let i = 0; i < headingRowValues.length; i++) {
+      if (headingRowValues[i] === columnHeading) return i + 1;
+    }
+
+    return -1;
   }
 }

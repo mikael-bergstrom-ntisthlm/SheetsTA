@@ -9,6 +9,7 @@ interface Config {
   pairs:
   {
     courseID: string,
-    courseworkID: string
+    courseworkID: string,
+    targetSheetName: string
   }[]
 }
