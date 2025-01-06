@@ -8,22 +8,28 @@ namespace ClassroomTA {
 
     config.pairs.forEach(pair => {
 
+      if (values.some(row => row[1] === pair.courseID)) return; // Skip if course's roster is already processed
+
       const classroomName = Classroom.Courses?.get(pair.courseID).name ?? "unnamed classroom";
 
       let nextPageToken: string = "";
 
-      do {
+      do { // For each page of results
+
         const roster = Classroom.Courses?.Students?.list(pair.courseID,
-          {
-            pageToken: nextPageToken
-          }
+          { pageToken: nextPageToken }
         );
+
         if (roster?.students == undefined) {
           SpreadsheetApp.getUi().alert("No roster found");
           return;
         }
 
         roster.students.forEach(student => {
+
+          // Skip if student already exists in roster
+          if (values.some(row => row[5] === student.profile?.id)) return;
+          
           values.push(
             [
               classroomName,
@@ -127,7 +133,7 @@ namespace ClassroomTA {
 
             const attachmentUrl = attachment.driveFile?.alternateLink ?? attachment.link?.url ?? attachment.youTubeVideo?.alternateLink ?? "unknown url";
             let attachmentType = GetAttachmentType(attachment)
-            
+
             values.push([
               submission.userId ?? "",
               pair.courseID,
@@ -166,7 +172,8 @@ namespace ClassroomTA {
       config.pairs.push(
         {
           courseID: pairSeparated[0].trim(),
-          courseworkID: pairSeparated.length > 1 ? pairSeparated[1].trim() : ""
+          courseworkID: pairSeparated.length > 1 ? pairSeparated[1].trim() : "",
+          targetSheetName: "_SUBMISSIONS"
         }
       )
     });
