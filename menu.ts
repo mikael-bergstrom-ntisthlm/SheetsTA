@@ -37,6 +37,7 @@ export namespace Menu {
       .addSeparator()
       .addItem("Setup student grading sheet", prefix + "Menu.SetupStudentGradingSheet")
       .addItem("Transfer to master grading sheet", prefix + "Menu.TransferToMasterSheet")
+      .addItem("Clear student grading sheet", prefix + "Menu.ClearStudentGradingSheet")
       .addToUi();
   }
 
@@ -177,6 +178,13 @@ export namespace Menu {
     let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
     StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet);
   }
+
+  export function ClearStudentGradingSheet() {
+    const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
+    if (!studentGradingSheet) return;
+
+    StudentGradingSheetTA.Clear(studentGradingSheet);
+  }
 }
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
@@ -205,8 +213,9 @@ x MIME types of attachments
       - with URL
       - Selectively
     - Update documents
+- Make a sidebar with easy access shortcuts questionmark
 - File management
-  - Naming files (Surname Name Assignment?)
+  - Renaming files (Surname Name Assignment?)
 - Moar git
   - Handle github access token
   - _GIT activity page

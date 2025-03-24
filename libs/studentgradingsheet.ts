@@ -1,8 +1,8 @@
 /// <reference path="rubrics.ts" />
 
 function Test() {
-  const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
-  if (!masterGradingSheet) return;
+  // const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+  // if (!masterGradingSheet) return;
 
   const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", SpreadsheetApp.getActive(), false);
   if (!studentGradingSheet) return;
@@ -10,11 +10,13 @@ function Test() {
   // StudentGradingSheetTA.CreateOrUpdateStudentGradingSheet(masterGradingSheet);
 
   // let userId = "115898972864944841723";
-  let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
+  // let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
 
-  Logger.log(userId);
+  // Logger.log(userId);
 
-  StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet);
+  // StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet);
+
+  StudentGradingSheetTA.Clear(studentGradingSheet);
 
 }
 
@@ -166,10 +168,18 @@ namespace StudentGradingSheetTA {
   }
 
   export function Clear(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
-    studentGradingSheet.getRange(
+    const checkmarkRange = studentGradingSheet.getRange(
       _HeaderRow + 1,
-      _ColCheckmark
+      _ColCheckmark,
+      studentGradingSheet.getMaxRows() - _HeaderRow + 1 // TODO: How to improve speed?
     )
+
+    const checkmarkValues = checkmarkRange.getValues().map(row => {
+      if (row[0] === "✔" || row[0] === "✘") return ["✘"]
+      else return [""];
+    });
+
+    checkmarkRange.setValues(checkmarkValues);
 
   }
 
