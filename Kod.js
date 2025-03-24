@@ -4,3 +4,9 @@
 function onOpen() {
   SheetsTAInternal();
 }
+
+/*
+function onOpen() {
+  SheetsTA.SheetsTASetup();
+}
+*/

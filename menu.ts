@@ -5,6 +5,8 @@
 /// <reference path="./libs/utils.ts" />
 /// <reference path="./libs/master.ts" />
 /// <reference path="./libs/rubrics.ts" />
+/// <reference path="./libs/studentgradingsheet.ts" />
+
 
 
 function SheetsTASetup() { Menu.Setup("SheetsTA."); }
@@ -32,6 +34,9 @@ export namespace Menu {
         .addItem("Update roster", prefix + "Menu.UpdateRoster")
         .addItem("Update submissions", prefix + "Menu.UpdateSubmissions")
       )
+      .addSeparator()
+      .addItem("Setup student grading sheet", prefix + "Menu.SetupStudentGradingSheet")
+      .addItem("Transfer to master grading sheet", prefix + "Menu.TransferToMasterSheet")
       .addToUi();
   }
 
@@ -155,6 +160,23 @@ export namespace Menu {
 
     return Utils.GetUniqueDateStrings(dates, format);
   }
+
+  export function SetupStudentGradingSheet() {
+    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+    if (!masterGradingSheet) return;
+    StudentGradingSheetTA.CreateOrUpdateStudentGradingSheet(masterGradingSheet);
+  }
+
+  export function TransferToMasterSheet() {
+    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+    if (!masterGradingSheet) return;
+
+    const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
+    if (!studentGradingSheet) return;
+
+    let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
+    StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet);
+  }
 }
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
@@ -163,14 +185,15 @@ export namespace Menu {
 
 /* Implement:
 x Make submenus
+x MIME types of attachments
 - Grading support
   - Generate grading page from current overview sheet
     x Rubrics
     x Checkboxes
     x Dropdown student names + id
-  - Copy student's info from overview
+  - Copy student's info from overview to grading page
   - Clear sheet
-  - Copy sheet data back to overview
+  - Copy sheet data back to overview from grading page
   - Generate overview sheet
     - Based on template
       - Extra info on each student

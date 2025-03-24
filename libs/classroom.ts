@@ -1,6 +1,6 @@
 /// <reference path="./github.ts" />
-/// <reference path="interfaces.ts" />
-
+/// <reference path="./interfaces.ts" />
+/// <reference path="./drive.ts" />
 
 namespace ClassroomTA {
   export function GetRoster(config: Config) {
@@ -29,7 +29,7 @@ namespace ClassroomTA {
 
           // Skip if student already exists in roster
           if (values.some(row => row[5] === student.profile?.id)) return;
-          
+
           values.push(
             [
               classroomName,
@@ -110,7 +110,7 @@ namespace ClassroomTA {
   }
 
   export function GetStudentSubmissions(config: Config): string[][] {
-    let values: string[][] = [["UserID", "CourseID", "CourseworkID", "State", "Type", "Submission URL"]];
+    let values: string[][] = [["UserID", "CourseID", "CourseworkID", "State", "Type", "MIME", "Submission URL"]];
 
     config.pairs.forEach(pair => {
 
@@ -133,6 +133,7 @@ namespace ClassroomTA {
 
             const attachmentUrl = attachment.driveFile?.alternateLink ?? attachment.link?.url ?? attachment.youTubeVideo?.alternateLink ?? "unknown url";
             let attachmentType = GetAttachmentType(attachment)
+            let attachmentMimeType = DriveTA.GetFileMimeType(attachment);
 
             values.push([
               submission.userId ?? "",
@@ -140,6 +141,7 @@ namespace ClassroomTA {
               pair.courseworkID,
               submission.state ?? "",
               attachmentType,
+              attachmentMimeType,
               GithubTA.UrlSanitize(attachmentUrl)
             ])
           });
@@ -187,4 +189,5 @@ namespace ClassroomTA {
         attachment.youTubeVideo != undefined ? "Youtube video" :
           "Unknown type";
   }
+
 }

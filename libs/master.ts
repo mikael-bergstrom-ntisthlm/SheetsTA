@@ -31,7 +31,7 @@ namespace MasterDocument {
   }
 
   export function UpdateRoster(masterConfig: Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
-    const rosterOrigo = SheetsTA.CreateOrGetSheet("_ROSTER", spreadsheet).getRange(1, 1);
+    const rosterOrigo = SheetsTA.CreateOrGetSheet("_ROSTER", spreadsheet, true).getRange(1, 1);
     const rosterValues = ClassroomTA.GetRoster(masterConfig);
     SheetsTA.InsertValuesAt(rosterValues, rosterOrigo);
   }
@@ -45,7 +45,7 @@ namespace MasterDocument {
 
       // Get student submissions
       const submissionValues = ClassroomTA.GetStudentSubmissions(config);
-      const submissionsOrigo = SheetsTA.CreateOrGetSheet(targetSheet, spreadsheet).getRange(1, 1);
+      const submissionsOrigo = SheetsTA.CreateOrGetSheet(targetSheet, spreadsheet, true).getRange(1, 1);
 
       SheetsTA.InsertValuesAt(submissionValues, submissionsOrigo);
     });

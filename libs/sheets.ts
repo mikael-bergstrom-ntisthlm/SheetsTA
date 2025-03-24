@@ -33,7 +33,7 @@ namespace SheetsTA {
 
   export function CreateOrGetSheet(
     sheetName: string,
-    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet): GoogleAppsScript.Spreadsheet.Sheet {
+    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet, clear: boolean): GoogleAppsScript.Spreadsheet.Sheet {
 
     spreadsheet.toast("Updating " + sheetName);
 
@@ -42,7 +42,7 @@ namespace SheetsTA {
       sheet = spreadsheet.insertSheet(sheetName);
       sheet.setFrozenRows(1);
     }
-    else {
+    else if (clear){
       sheet.clear();
     }
 
