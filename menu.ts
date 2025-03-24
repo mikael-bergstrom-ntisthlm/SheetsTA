@@ -162,13 +162,13 @@ export namespace Menu {
   }
 
   export function SetupStudentGradingSheet() {
-    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning"); // TODO: make more general
     if (!masterGradingSheet) return;
-    StudentGradingSheetTA.CreateOrUpdateStudentGradingSheet(masterGradingSheet);
+    StudentGradingSheetTA.Setup.CreateOrUpdateStudentGradingSheet(masterGradingSheet);
   }
 
   export function TransferToMasterSheet() {
-    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning"); // TODO: make more general
     if (!masterGradingSheet) return;
 
     const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
@@ -187,18 +187,24 @@ export namespace Menu {
 x Make submenus
 x MIME types of attachments
 - Grading support
-  - Generate grading page from current overview sheet
+  x Generate grading page from current overview sheet
     x Rubrics
     x Checkboxes
     x Dropdown student names + id
   - Copy student's info from overview to grading page
   - Clear sheet
-  - Copy sheet data back to overview from grading page
+  x Copy sheet data back to overview from grading page
   - Generate overview sheet
     - Based on template
       - Extra info on each student
         - Submission filter/join columns (with formulas)
       - Source of rubrics: url
+  - Student response sheets (No more Autocrat!!!)
+    - Generate template sheet
+    - Generate documents in subfolder
+      - with URL
+      - Selectively
+    - Update documents
 - File management
   - Naming files (Surname Name Assignment?)
 - Moar git

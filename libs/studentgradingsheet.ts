@@ -20,146 +20,163 @@ function Test() {
 
 namespace StudentGradingSheetTA {
 
-  export function CreateOrUpdateStudentGradingSheet(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  const _ColRubric: number = 1;
+  const _ColCriteria: number = 2;
+  const _ColColnum: number = 3;
+  const _ColCheckmark: number = 4;
+  const _ColGrade: number = 5;
+  const _ColActive: number = 6;
 
-    // PREP
-    const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", SpreadsheetApp.getActive(), true);
-    if (!studentGradingSheet) return;
+  const _HeaderRow: number = 3;
 
-    // CLEAR & CLEAN
-    studentGradingSheet.clear();
-    studentGradingSheet.getFilter()?.remove();
+  export namespace Setup {
+    export function CreateOrUpdateStudentGradingSheet(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
-    // SETUP BLOCKS
-    SetupHeaderBlock(studentGradingSheet, masterGradingSheet);
-    SetupRubricsBlock(studentGradingSheet, masterGradingSheet);
+      // PREP
+      const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", SpreadsheetApp.getActive(), true);
+      if (!studentGradingSheet) return;
 
-    SetColumnWidths(studentGradingSheet);
-  }
+      // CLEAR & CLEAN
+      studentGradingSheet.clear();
+      studentGradingSheet.getFilter()?.remove();
 
-  function SetupHeaderBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+      // SETUP BLOCKS
+      SetupHeaderBlock(studentGradingSheet, masterGradingSheet);
+      SetupRubricsBlock(studentGradingSheet, masterGradingSheet);
 
-    const studentNameIds = GetStudentNameIds(rosterGradingSheet);
+      // SET WIDTHS
+      studentGradingSheet
+        .setColumnWidth(_ColRubric, 223)
+        .setColumnWidth(_ColCriteria, 275)
+        .setColumnWidth(_ColGrade, 70)
+        .setColumnWidth(_ColActive, 70)
+        .hideColumns(_ColColnum);
+    }
+    function SetupHeaderBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
-    studentGradingSheet.setFrozenRows(3);
+      const studentNameIds = GetStudentNameIds(rosterGradingSheet);
 
-    // 3 header rows: Student choice, blank, headings
-    const headerRange = studentGradingSheet.getRange(1, 1, studentGradingSheet.getMaxRows(), 6);
-    const headerValues = headerRange.getValues();
+      studentGradingSheet.setFrozenRows(_HeaderRow);
 
-    // Setup student name cells
-    headerValues[0][0] = "Student name:";
-    studentGradingSheet.getRange(1, 2, 1, 3).merge();
+      // 3 header rows: Student choice, blank, headings
+      const headerRange = studentGradingSheet.getRange(1, 1, studentGradingSheet.getMaxRows(), 6);
+      const headerValues = headerRange.getValues();
 
-    let rule = SpreadsheetApp.newDataValidation().requireValueInList(studentNameIds).build();
-    studentGradingSheet.getRange(1, 2)
-      .setDataValidation(rule);
+      // Setup student name cells
+      headerValues[0][0] = "Student name:";
+      studentGradingSheet.getRange(1, 2, 1, 3).merge();
 
-    // Setup data headers
-    headerValues[2] = ["Rubric", "Criteria", "Column number", "Check", "Grade", "Active"];
+      let rule = SpreadsheetApp.newDataValidation().requireValueInList(studentNameIds).build();
+      studentGradingSheet.getRange(1, 2)
+        .setDataValidation(rule);
 
-    headerRange.setValues(headerValues);
-  }
+      // Setup data headers
+      headerValues[2][_ColRubric - 1] = "Rubric";
+      headerValues[2][_ColCriteria - 1] = "Criteria";
+      headerValues[2][_ColColnum - 1] = "Column number";
+      headerValues[2][_ColCheckmark - 1] = "Check";
+      headerValues[2][_ColGrade - 1] = "Grade";
+      headerValues[2][_ColActive - 1] = "Active";
 
-  function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
-    const rubrics = RubricsTA.GetRubrics(rosterGradingSheet);
+      headerRange.setValues(headerValues);
+    }
 
-    let rubricStartRow = studentGradingSheet.getFrozenRows() + 1;
+    function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+      const rubrics = RubricsTA.GetRubrics(rosterGradingSheet);
 
-    const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows(), 6);
-    const dataValues = dataRange.getValues();
+      let rubricStartRow = _HeaderRow + 1;
 
-    // Insert rows from rubrics
-    let row = 0;
+      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows(), 6);
+      const dataValues = dataRange.getValues();
 
-    rubrics.forEach(rubric => {
-      let rubricBlockStartRow = rubricStartRow + row;
+      // Insert rows from rubrics
+      let row = 0;
 
-      Logger.log(rubric.name);
-      dataValues[row][0] = rubric.name;
+      rubrics.forEach(rubric => {
+        let rubricBlockStartRow = rubricStartRow + row;
 
-      let lastColNr = 0;
-      rubric.criteria.forEach(criteria => {
-        dataValues[row][1] = criteria.name;
-        dataValues[row][2] = criteria.columnNumber;
-        dataValues[row][3] = "✘";
-        dataValues[row][4] = criteria.grade;
-        dataValues[row][5] = criteria.active;
-        lastColNr = criteria.columnNumber;
-        row++;
+        dataValues[row][0] = rubric.name;
+
+        rubric.criteria.forEach(criteria => {
+          dataValues[row][_ColCriteria - 1] = criteria.name;
+          dataValues[row][_ColColnum - 1] = criteria.columnNumber;
+          dataValues[row][_ColCheckmark - 1] = "✘";
+          dataValues[row][_ColGrade - 1] = criteria.grade;
+          dataValues[row][_ColActive - 1] = criteria.active;
+          row++;
+        });
+
+        // "Grade" on its own row
+        dataValues[row][_ColCriteria - 1] = "Grade";
+        dataValues[row][_ColColnum - 1] = rubric.criteria.slice(-1)[0].columnNumber + 1;
+
+        row += 2;
+
+        FormatRubricBlock(rubric, studentGradingSheet, rubricBlockStartRow)
       });
 
-      // "Grade" on its own row
-      dataValues[row][1] = "Grade";
-      dataValues[row][2] = rubric.criteria.slice(-1)[0].columnNumber + 1;
+      dataRange.setValues(dataValues);
 
-      row += 2;
+      // General formatting
+      dataRange.setWrap(true);
+      dataRange.setVerticalAlignment("top");
 
-      FormatRubricBlock(rubric, studentGradingSheet, rubricBlockStartRow)
-    });
+      // ADD FILTER
+      SetFilter(rubrics, dataRange);
+    }
 
-    dataRange.setValues(dataValues);
+    function FormatRubricBlock(rubric: RubricsTA.Rubric, studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rubricBlockStartRow: number) {
 
-    // General formatting
-    dataRange.setWrap(true);
-    dataRange.setVerticalAlignment("top");
+      // Rubric label block
+      studentGradingSheet.getRange(rubricBlockStartRow, _ColRubric, rubric.criteria.length + 1, 1)
+        .merge()
+        .setBackground("#EFEFEF")
+        .setFontWeight("bold");
 
-    // ADD FILTER
-    SetFilter(rubrics, dataRange);
+      // Checkboxes
+      studentGradingSheet.getRange(rubricBlockStartRow, _ColCheckmark, rubric.criteria.length, 1)
+        .setHorizontalAlignment("center")
+        .insertCheckboxes("✔", "✘");
+
+      // Grade sub-block
+      studentGradingSheet.getRange(rubricBlockStartRow + rubric.criteria.length, _ColCriteria, 1, 1)
+        .setHorizontalAlignment("right")
+        .setFontWeight("bold");
+
+      studentGradingSheet.getRange(rubricBlockStartRow + rubric.criteria.length, _ColCheckmark, 1, 1)
+        .setHorizontalAlignment("center")
+        .setFontWeight("bold")
+        .setBackgroundRGB(217, 234, 211);
+    }
+
+    function SetFilter(rubrics: RubricsTA.Rubric[], dataRange: GoogleAppsScript.Spreadsheet.Range) {
+      // Count number of criteria
+      const totalHeight = rubrics.reduce(
+        (accumulator, rubric) => {
+          return accumulator + rubric.criteria.length;
+        }, 0
+      )
+        + rubrics.length * 2; // Add 1 for the grade and 1 for spacing, for each rubric
+
+      let filterRange = dataRange.offset(-1, 0, totalHeight);
+      let filter = filterRange.createFilter();
+      const criteria = SpreadsheetApp.newFilterCriteria().setHiddenValues(["FALSE"]);
+      filter.setColumnFilterCriteria(_ColCheckmark, criteria);
+    }
   }
 
-  function FormatRubricBlock(rubric: RubricsTA.Rubric, studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rubricBlockStartRow: number) {
-
-    // Rubric label block
-    let range = studentGradingSheet.getRange(rubricBlockStartRow, 1, rubric.criteria.length + 1, 1);
-    range.merge();
-    range.setBackground("#EFEFEF");
-    range.setFontWeight("bold");
-
-    // Checkboxes
-    let r = studentGradingSheet.getRange(rubricBlockStartRow, 4, rubric.criteria.length, 1);
-    r.setHorizontalAlignment("center");
-    r.insertCheckboxes("✔", "✘");
-
-    // Grade sub-block
-    const gradeTextCell = studentGradingSheet.getRange(rubricBlockStartRow + rubric.criteria.length, 2);
-
-    gradeTextCell.setHorizontalAlignment("right")
-      .setFontWeight("bold")
-      .offset(0, 2)
-      .setHorizontalAlignment("center")
-      .setFontWeight("bold")
-      .setBackgroundRGB(217, 234, 211);
-  }
-
-  function SetFilter(rubrics: RubricsTA.Rubric[], dataRange: GoogleAppsScript.Spreadsheet.Range) {
-    // Count number of criteria
-    const totalHeight = rubrics.reduce(
-      (accumulator, rubric) => {
-        return accumulator + rubric.criteria.length;
-      }, 0
+  export function Clear(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    studentGradingSheet.getRange(
+      _HeaderRow + 1,
+      _ColCheckmark
     )
-      + rubrics.length * 2; // Add 1 for the grade and 1 for spacing, for each rubric
 
-    let filterRange = dataRange.offset(-1, 0, totalHeight);
-    let filter = filterRange.createFilter();
-    const criteria = SpreadsheetApp.newFilterCriteria().setHiddenValues(["FALSE"]);
-    filter.setColumnFilterCriteria(6, criteria);
-  }
-
-  function SetColumnWidths(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
-    sheet.setColumnWidth(1, 223);
-    sheet.setColumnWidth(2, 275);
-    sheet.setColumnWidth(5, 70);
-    sheet.setColumnWidth(6, 70);
-    sheet.hideColumns(3);
   }
 
   export function TransferToMasterSheet(userID: string, masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
     const targetStudentRange = GetStudentRange(userID, masterGradingSheet);
-    if (targetStudentRange == null)
-    {
+    if (targetStudentRange == null) {
       Browser.msgBox("User ID not found!");
       return;
     }
@@ -185,18 +202,16 @@ namespace StudentGradingSheetTA {
   }
 
   export function GetSelectedUserId(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): string {
-    const nameCellValue:string = studentGradingSheet.getRange(1, 2).getValue();
+    const nameCellValue: string = studentGradingSheet.getRange(1, 2).getValue();
 
-    if (nameCellValue == "")
-    {
+    if (nameCellValue == "") {
       Browser.msgBox("No selection!");
       Logger.log("No selection!");
       return "";
     }
 
     let pair = nameCellValue.split("|");
-    if (pair.length != 2 || pair[1] === "")
-    {
+    if (pair.length != 2 || pair[1] === "") {
       Browser.msgBox("Invalid selection!");
       Logger.log("Invalid selection!");
       return "";
@@ -227,7 +242,7 @@ namespace StudentGradingSheetTA {
   function GetStudentNameIds(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
     const headingRowNumber = masterGradingSheet.getFrozenRows();
-    const dataHeight = masterGradingSheet.getMaxRows() - masterGradingSheet.getFrozenRows();
+    const dataHeight = masterGradingSheet.getMaxRows() - headingRowNumber;
 
     let colnumId = SheetsTA.GetColumnNum("UserID", masterGradingSheet, headingRowNumber) // 6
     let colnumSurname = SheetsTA.GetColumnNum("Surname", masterGradingSheet, headingRowNumber)
