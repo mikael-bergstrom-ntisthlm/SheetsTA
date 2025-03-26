@@ -42,7 +42,7 @@ namespace SheetsTA {
       sheet = spreadsheet.insertSheet(sheetName);
       sheet.setFrozenRows(1);
     }
-    else if (clear){
+    else if (clear) {
       sheet.clear();
     }
 
@@ -55,7 +55,12 @@ namespace SheetsTA {
     const headingRowValues = headingRow.getValues()[0];
 
     for (let i = 0; i < headingRowValues.length; i++) {
-      if (headingRowValues[i] === columnHeading) return i + 1;
+      if (
+        String(headingRowValues[i]) 
+          .localeCompare(columnHeading, undefined, { sensitivity: 'accent' }) === 0) {
+
+        return i + 1;
+      }
     }
 
     return -1;

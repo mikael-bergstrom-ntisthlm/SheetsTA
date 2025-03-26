@@ -5,7 +5,7 @@
 /// <reference path="./libs/utils.ts" />
 /// <reference path="./libs/master.ts" />
 /// <reference path="./libs/rubrics.ts" />
-/// <reference path="./libs/studentgradingsheet.ts" />
+/// <reference path="./pages/studentgradingsheet.ts" />
 
 
 
@@ -36,7 +36,7 @@ export namespace Menu {
       )
       .addSeparator()
       .addItem("Setup student grading sheet", prefix + "Menu.SetupStudentGradingSheet")
-      .addItem("Transfer to master grading sheet", prefix + "Menu.TransferToMasterSheet")
+      .addItem("Transfer to master grading sheet & clear", prefix + "Menu.TransferToMasterSheet")
       .addItem("Clear student grading sheet", prefix + "Menu.ClearStudentGradingSheet")
       .addToUi();
   }
@@ -163,9 +163,8 @@ export namespace Menu {
   }
 
   export function SetupStudentGradingSheet() {
-    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning"); // TODO: make more general
-    if (!masterGradingSheet) return;
-    StudentGradingSheetTA.Setup.CreateOrUpdateStudentGradingSheet(masterGradingSheet);
+
+    StudentGradingSheetTA.Setup.CreateOrUpdateStudentGradingSheet(SpreadsheetApp.getActive(), "Bedömning");
   }
 
   export function TransferToMasterSheet() {
@@ -176,7 +175,9 @@ export namespace Menu {
     if (!studentGradingSheet) return;
 
     let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
-    StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet);
+    if (userId === "") return;
+    
+    StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet, true);
   }
 
   export function ClearStudentGradingSheet() {
@@ -199,9 +200,13 @@ x MIME types of attachments
     x Rubrics
     x Checkboxes
     x Dropdown student names + id
+    x Clear sheet
+    x Copy sheet data back to overview from grading page
+  x Remove unnecessary rows & cols from grading sheet
   - Copy student's info from overview to grading page
-  - Clear sheet
-  x Copy sheet data back to overview from grading page
+  - Add box for comment to student
+  - ?? Defaults for grades (+configurable?)
+
   - Generate overview sheet
     - Based on template
       - Extra info on each student

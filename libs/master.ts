@@ -1,14 +1,9 @@
 /// <reference path="./classroom.ts" />
 /// <reference path="./sheets.ts" />
 
-function TestMaster() {
-  MasterDocument.Setup();
-}
-
 namespace MasterDocument {
-  export function Setup() {
+  export function Setup(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
 
-    let spreadsheet = SpreadsheetApp.getActive();
     let masterConfig = GetMasterConfig(spreadsheet);
     if (!masterConfig || !masterConfig.pairs) return;
 

@@ -2,16 +2,14 @@
 
 
 namespace RubricsTA {
+  export function GetRubrics(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): Rubric[] {
 
+    if (!masterGradingSheet) return [];
 
-  export function GetRubrics(sheet: GoogleAppsScript.Spreadsheet.Sheet): Rubric[] {
-
-    if (!sheet) return [];
-
-    let headerBlock = sheet.getRange(
-      1, sheet.getFrozenColumns() + 1,
-      sheet.getFrozenRows(),
-      sheet.getLastColumn()
+    let headerBlock = masterGradingSheet.getRange(
+      1, masterGradingSheet.getFrozenColumns() + 1,
+      masterGradingSheet.getFrozenRows(),
+      masterGradingSheet.getLastColumn()
     );
 
     let headerValues = headerBlock?.getValues();
@@ -32,7 +30,7 @@ namespace RubricsTA {
       if (rubricTitleRow[i] !== "") {
         currentRubric = {
           criteria: [],
-          columnNumber: sheet.getFrozenColumns() + i,
+          columnNumber: masterGradingSheet.getFrozenColumns() + i,
           name: rubricTitleRow[i]
         }
         rubrics.push(currentRubric);
@@ -46,7 +44,7 @@ namespace RubricsTA {
             shortform: shortformRow[i],
             active: activeRow[i],
             grade: gradeRow[i],
-            columnNumber: sheet.getFrozenColumns() + i
+            columnNumber: masterGradingSheet.getFrozenColumns() + i
           }
         )
       }

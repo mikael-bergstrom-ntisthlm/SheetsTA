@@ -1,22 +1,29 @@
-/// <reference path="rubrics.ts" />
+/// <reference path="../libs/rubrics.ts" />
 
 function Test() {
-  // const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+
+  // const spreadsheet = SpreadsheetApp.getActive();
+  // const spreadsheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1E7SV82BqJbA4Qt0vYGATCxF7pXAT7YniXFmovSKRH30/");
+
+  // Teoriprov
+  const spreadsheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1J-_WeDj_QVBR_lF-kGIwEYTNXSleRV3RsOlsHjs5nSs/");
+
+  // const masterGradingSheet = spreadsheet.getSheetByName("Bedömning");
   // if (!masterGradingSheet) return;
 
-  const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", SpreadsheetApp.getActive(), false);
-  if (!studentGradingSheet) return;
+  // StudentGradingSheetTA.GetStudentNameIds(masterGradingSheet);
 
-  // StudentGradingSheetTA.CreateOrUpdateStudentGradingSheet(masterGradingSheet);
+  StudentGradingSheetTA.Setup.CreateOrUpdateStudentGradingSheet(spreadsheet, "Bedömning");
+
+  // const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", SpreadsheetApp.getActive(), false);
+  // if (!studentGradingSheet) return;
 
   // let userId = "115898972864944841723";
   // let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
 
-  // Logger.log(userId);
 
-  // StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet);
+  // StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet, false);
 
-  StudentGradingSheetTA.Clear(studentGradingSheet);
 
 }
 
@@ -32,10 +39,13 @@ namespace StudentGradingSheetTA {
   const _HeaderRow: number = 3;
 
   export namespace Setup {
-    export function CreateOrUpdateStudentGradingSheet(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    export function CreateOrUpdateStudentGradingSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet, masterGradingSheetName: string) {
 
       // PREP
-      const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", SpreadsheetApp.getActive(), true);
+      const masterGradingSheet = spreadsheet.getSheetByName(masterGradingSheetName);
+      if (!masterGradingSheet) return;
+
+      const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", spreadsheet, true);
       if (!studentGradingSheet) return;
 
       // CLEAR & CLEAN
@@ -53,7 +63,12 @@ namespace StudentGradingSheetTA {
         .setColumnWidth(_ColGrade, 70)
         .setColumnWidth(_ColActive, 70)
         .hideColumns(_ColColnum);
+
+      // TRIMMING
+      TrimSheetToContents(studentGradingSheet, 1);
+
     }
+
     function SetupHeaderBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
       const studentNameIds = GetStudentNameIds(rosterGradingSheet);
@@ -83,8 +98,8 @@ namespace StudentGradingSheetTA {
       headerRange.setValues(headerValues);
     }
 
-    function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
-      const rubrics = RubricsTA.GetRubrics(rosterGradingSheet);
+    function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+      const rubrics = RubricsTA.GetRubrics(masterGradingSheet);
 
       let rubricStartRow = _HeaderRow + 1;
 
@@ -163,7 +178,22 @@ namespace StudentGradingSheetTA {
       let filterRange = dataRange.offset(-1, 0, totalHeight);
       let filter = filterRange.createFilter();
       const criteria = SpreadsheetApp.newFilterCriteria().setHiddenValues(["FALSE"]);
-      filter.setColumnFilterCriteria(_ColCheckmark, criteria);
+      filter.setColumnFilterCriteria(_ColActive, criteria);
+    }
+
+    function TrimSheetToContents(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, margin: number) {
+      const lastColumn = studentGradingSheet.getLastColumn();
+      const lastRow = studentGradingSheet.getLastRow();
+
+      studentGradingSheet.deleteColumns(
+        lastColumn + margin,
+        studentGradingSheet.getMaxColumns() - lastColumn - margin
+      );
+
+      studentGradingSheet.deleteRows(
+        lastRow + margin,
+        studentGradingSheet.getMaxRows() - lastRow - margin
+      );
     }
   }
 
@@ -180,10 +210,12 @@ namespace StudentGradingSheetTA {
     });
 
     checkmarkRange.setValues(checkmarkValues);
-
   }
 
-  export function TransferToMasterSheet(userID: string, masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function TransferToMasterSheet(userID: string,
+    masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    clearAfterTransfer: boolean) {
 
     const targetStudentRange = GetStudentRange(userID, masterGradingSheet);
     if (targetStudentRange == null) {
@@ -193,21 +225,49 @@ namespace StudentGradingSheetTA {
 
     const targetStudentValues = targetStudentRange.getValues();
 
-    const studentGradingFilterValues = studentGradingSheet.getFilter()?.getRange().getValues();
+    const studentGradingFilterRange = studentGradingSheet.getFilter()?.getRange();
+    if (!studentGradingFilterRange) return;
 
-    studentGradingFilterValues?.forEach(row => {
+    const studentGradingFilterValues = studentGradingFilterRange.getValues();
+
+    studentGradingFilterValues?.forEach((row, rowNum) => {
       let targetColumnNum = parseInt(row[2]);
+
       if (!isNaN(targetColumnNum)) {
-        Logger.log(targetColumnNum);
         targetStudentValues[0][targetColumnNum] = row[3];
+
+        if (clearAfterTransfer) {
+          if (row[0] === "✔" || row[0] === "✘") row[3] = ["✘"]
+          else row[3] = "";
+        }
       }
+      if (clearAfterTransfer) studentGradingFilterValues[rowNum] = row;
     });
 
     targetStudentRange.setValues(targetStudentValues);
 
+    if (clearAfterTransfer) {
+      studentGradingFilterRange.setValues(studentGradingFilterValues); // Jesus christ is this really necessary
+    }
   }
 
-  export function ImportFromMasterSheet(userID: string, masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function ImportFromMasterSheet(userID: string,
+    masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    
+    const targetStudentRange = GetStudentRange(userID, masterGradingSheet);
+    if (targetStudentRange == null) {
+      Browser.msgBox("User ID not found!");
+      return;
+    }
+
+    const targetStudentValues = targetStudentRange.getValues();
+
+    const studentGradingFilterRange = studentGradingSheet.getFilter()?.getRange();
+    if (!studentGradingFilterRange) return;
+
+    const studentGradingFilterValues = studentGradingFilterRange.getValues();
+
 
   }
 
@@ -249,29 +309,37 @@ namespace StudentGradingSheetTA {
     return studentRange;
   }
 
-  function GetStudentNameIds(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function GetStudentNameIds(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
     const headingRowNumber = masterGradingSheet.getFrozenRows();
     const dataHeight = masterGradingSheet.getMaxRows() - headingRowNumber;
 
-    let colnumId = SheetsTA.GetColumnNum("UserID", masterGradingSheet, headingRowNumber) // 6
-    let colnumSurname = SheetsTA.GetColumnNum("Surname", masterGradingSheet, headingRowNumber)
-    let colnumName = SheetsTA.GetColumnNum("Name", masterGradingSheet, headingRowNumber)
-
-    let studentIds = masterGradingSheet.getRange(headingRowNumber + 1, colnumId, dataHeight).getValues();
-    let studentSurnames = masterGradingSheet.getRange(headingRowNumber + 1, colnumSurname, dataHeight).getValues();
-    let studentNames = masterGradingSheet.getRange(headingRowNumber + 1, colnumName, dataHeight).getValues();
+    let studentIds = GetContentsOfColumn("userid", headingRowNumber, dataHeight, masterGradingSheet);
+    let studentSurnames = GetContentsOfColumn("surname", headingRowNumber, dataHeight, masterGradingSheet);
+    let studentNames = GetContentsOfColumn("name", headingRowNumber, dataHeight, masterGradingSheet);
 
     const studentList: string[] = [];
 
     for (let i = 0; i < studentIds.length; i++) {
-      if (studentIds[i][0] === "") continue;
+      if (studentIds[i] === "") continue;
 
       studentList.push(
-        studentNames[i][0] + " " + studentSurnames[i][0] + " | " + studentIds[i][0]
+        studentNames[i] + " " + studentSurnames[i] + " | " + studentIds[i]
       );
     }
 
     return studentList;
+  }
+
+  function GetContentsOfColumn(columnName: string, headingRowNumber: number, dataHeight: number, sheet: GoogleAppsScript.Spreadsheet.Sheet): string[] {
+
+    let colId = SheetsTA.GetColumnNum(columnName, sheet, headingRowNumber);
+    if (colId < 0) Browser.msgBox(`Column "${columnName}" not found`);
+
+    let data = sheet.getRange(headingRowNumber + 1, colId, dataHeight)
+      .getValues()
+      .map(item => item[0]);
+
+    return data;
   }
 }
