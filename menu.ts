@@ -37,6 +37,7 @@ export namespace Menu {
       .addSeparator()
       .addItem("Setup student grading sheet", prefix + "Menu.SetupStudentGradingSheet")
       .addItem("Transfer to master grading sheet & clear", prefix + "Menu.TransferToMasterSheet")
+      .addItem("Transfer from master grading sheet", prefix + "Menu.TransferFromMasterSheet")
       .addItem("Clear student grading sheet", prefix + "Menu.ClearStudentGradingSheet")
       .addToUi();
   }
@@ -176,8 +177,27 @@ export namespace Menu {
 
     let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
     if (userId === "") return;
-    
-    StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet, true);
+
+    StudentGradingSheetTA.TransferToMasterSheet(
+      userId,
+      masterGradingSheet,
+      studentGradingSheet, true);
+  }
+
+  export function TransferFromMasterSheet() {
+    const masterGradingSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning"); // TODO: make more general
+    if (!masterGradingSheet) return;
+
+    const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
+    if (!studentGradingSheet) return;
+
+    let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
+    if (userId === "") return;
+
+    StudentGradingSheetTA.ImportFromMasterSheet(
+      userId,
+      masterGradingSheet,
+      studentGradingSheet);
   }
 
   export function ClearStudentGradingSheet() {
@@ -205,19 +225,23 @@ x MIME types of attachments
   x Remove unnecessary rows & cols from grading sheet
   - Copy student's info from overview to grading page
   - Add box for comment to student
+  - Give Grade columns the right active/inactive bool
   - ?? Defaults for grades (+configurable?)
 
-  - Generate overview sheet
-    - Based on template
-      - Extra info on each student
-        - Submission filter/join columns (with formulas)
-      - Source of rubrics: url
   - Student response sheets (No more Autocrat!!!)
     - Generate template sheet
     - Generate documents in subfolder
       - with URL
       - Selectively
     - Update documents
+
+  - Generate master overview sheet
+    - Based on template
+      - Extra info on each student
+        - Submission filter/join columns (with formulas)
+      - Source of rubrics: url
+  
+    
 - Make a sidebar with easy access shortcuts questionmark
 - File management
   - Renaming files (Surname Name Assignment?)
