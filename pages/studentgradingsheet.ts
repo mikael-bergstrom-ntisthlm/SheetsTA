@@ -318,7 +318,4 @@ namespace StudentGradingSheetTA {
 
     return pair[1].trim();
   }
-
-  // TODO: Move these to module dealing w/ the master grading sheet
-
 }

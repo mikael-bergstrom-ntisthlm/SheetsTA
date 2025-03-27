@@ -85,10 +85,13 @@ export namespace Menu {
 
   export function GetClassrooms() {
 
-    let range = SpreadsheetApp.getActiveSheet().getActiveRange();
-    if (!range) return;
+    let classroomsOrigo = SpreadsheetApp
+      .getActiveSheet()
+      .getActiveRange();
+    if (!classroomsOrigo) return;
 
-    ClassroomTA.GetClassroomsTo(range);
+    const values = ClassroomTA.GetClassrooms();
+    SheetsTA.InsertValuesAt(values, classroomsOrigo);
   }
 
   export function SanitizeGithubURLs() {
@@ -209,8 +212,6 @@ export namespace Menu {
 }
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
-
-// TODO: Fix structure for generating grading page
 
 /* Implement:
 x Make submenus

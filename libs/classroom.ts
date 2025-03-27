@@ -3,12 +3,18 @@
 /// <reference path="./drive.ts" />
 
 namespace ClassroomTA {
-  export function GetRoster(config: Config) {
-    let values: string[][] = [["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"]];
+  /**
+   * Creates a roster of students by combining student lists from 1+ Google Classrooms
+   * @param config {Config} The config object to use; will contain info on what classrooms to get rosters from
+   * @returns {string[][]} A two-dimensional array; an array of rows containing student data. First row is headers. Each row (inner array) will contain) columns: Classroom (name), Course ID, Name, Surname, Email, UserID.
+   */
+  export function GetRoster(config: Config): string[][] {
+    let rosterValues: string[][] = [["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"]];
 
     config.pairs.forEach(pair => {
 
-      if (values.some(row => row[1] === pair.courseID)) return; // Skip if course's roster is already processed
+      // "1" means second column, where CourseID is stored
+      if (rosterValues.some(row => row[1] === pair.courseID)) return; // Skip if course's roster is already processed
 
       const classroomName = Classroom.Courses?.get(pair.courseID).name ?? "unnamed classroom";
 
@@ -16,6 +22,7 @@ namespace ClassroomTA {
 
       do { // For each page of results
 
+        // -- GET ROSTER
         const roster = Classroom.Courses?.Students?.list(pair.courseID,
           { pageToken: nextPageToken }
         );
@@ -25,12 +32,14 @@ namespace ClassroomTA {
           return;
         }
 
+        // -- PROCESS ROSTER
         roster.students.forEach(student => {
 
           // Skip if student already exists in roster
-          if (values.some(row => row[5] === student.profile?.id)) return;
+          //  "5" is the column for "UserID"
+          if (rosterValues.some(row => row[5] === student.profile?.id)) return;
 
-          values.push(
+          rosterValues.push(
             [
               classroomName,
               pair.courseID,
@@ -47,20 +56,27 @@ namespace ClassroomTA {
       } while (nextPageToken != "");
     });
 
-    return values;
+    return rosterValues;
   }
 
+  /**
+   * Creates a list of assignments by combining assignment lists from 1+ Google Classrooms
+   * @param config {Config} The config object to use; will contain info on what classrooms to get assignments from
+   * @returns {string[][]} A two-dimensional array; an array of rows containing assignment data. First row is headers. Each row (inner array) will contain) columns: Title, CourseID, CourseworkID
+   */
   export function GetAssignments(config: Config): string[][] {
     let values: string[][] = [["Title", "CourseID", "CourseworkID"]];
 
     config.pairs.forEach(pair => {
 
+      // -- GET ASSIGNMENTS
       const assignments = Classroom.Courses?.CourseWork?.list(pair.courseID);
       if (assignments?.courseWork == undefined) {
         SpreadsheetApp.getUi().alert("No assignments found");
         return;
       }
 
+      // -- PROCESS ASSIGNMENTS
       assignments.courseWork.forEach(assignment => {
         values.push(
           [
@@ -75,11 +91,17 @@ namespace ClassroomTA {
     return values;
   }
 
-  export function GetClassroomsTo(targetRangeStart: GoogleAppsScript.Spreadsheet.Range) {
-    let values: string[][] = [["Course name", "CourseID"]];
+  /**
+   * Creates a list of active classrooms the current user has access to
+   * @returns {string[][]} A two-dimensional array; an array of rows containing classroom data. First row is headers. Each row (inner array) will contain) columns: Course name, CourseID
+   */
+  export function GetClassrooms(): string[][] {
+    let classroomValues: string[][] = [["Course name", "CourseID"]];
     let nextPageToken: string = "";
 
     do {
+
+      // -- GET CLASSROOMS
       const classrooms = Classroom.Courses?.list(
         {
           courseStates: ["ACTIVE"],
@@ -89,11 +111,12 @@ namespace ClassroomTA {
 
       if (classrooms?.courses == undefined) {
         SpreadsheetApp.getUi().alert("No classrooms found!");
-        return;
+        return [];
       }
 
+      // -- PROCESS CLASSROOMS
       classrooms.courses.forEach(course => {
-        values.push(
+        classroomValues.push(
           [
             course.name ?? "",
             course.id ?? ""
@@ -103,20 +126,23 @@ namespace ClassroomTA {
 
     } while (nextPageToken != "");
 
-
-    let targetRange = targetRangeStart?.offset(0, 0, values.length, values[0].length);
-
-    targetRange?.setValues(values);
+    return classroomValues;
   }
 
+  /**
+   * Creates a list of student submission attachments by combining such attachments from 1+ Google Classroom assignments
+   * @param config {Config} The config object to use; will contain info on what classrooms & assignments to get submissions from
+   * @returns {string[][]} A two-dimensional array; an array of rows containing submission attachment data. First row is headers. Each row (inner array) will contain) columns: UserID, CourseID, CourseworkID (assignment ID), State (turned in, created etc), MIME, Submission URL.
+   */
   export function GetStudentSubmissions(config: Config): string[][] {
-    let values: string[][] = [["UserID", "CourseID", "CourseworkID", "State", "Type", "MIME", "Submission URL"]];
+    let submissionValues: string[][] = [["UserID", "CourseID", "CourseworkID", "State", "Type", "MIME", "Submission URL"]];
 
     config.pairs.forEach(pair => {
 
       let nextPageToken: string = "";
 
       do {
+        // -- GET SUBMISSIONS
         const submissions = Classroom.Courses?.CourseWork?.StudentSubmissions?.list(pair.courseID, pair.courseworkID,
           { pageToken: nextPageToken }
         );
@@ -126,16 +152,19 @@ namespace ClassroomTA {
           return;
         }
 
+        // -- PROCESS SUBMISSIONS
         submissions.studentSubmissions.forEach(submission => {
           if (submission.assignmentSubmission?.attachments == undefined) return;
 
+          // -- PROCESS ATTACHMENTS
           submission.assignmentSubmission?.attachments.forEach(attachment => {
 
+            // Prepare data
             const attachmentUrl = attachment.driveFile?.alternateLink ?? attachment.link?.url ?? attachment.youTubeVideo?.alternateLink ?? "unknown url";
             let attachmentType = GetAttachmentType(attachment)
             let attachmentMimeType = DriveTA.GetFileMimeType(attachment);
 
-            values.push([
+            submissionValues.push([
               submission.userId ?? "",
               pair.courseID,
               pair.courseworkID,
@@ -153,12 +182,13 @@ namespace ClassroomTA {
 
     })
 
-    return values;
+    return submissionValues;
   }
 
   // ----------------------------------------------------------------------------
   //  HELPERS
 
+  // TODO: Generalize this, reuse in master document
   export function GetConfigFromRange(range: GoogleAppsScript.Spreadsheet.Range): Config {
 
     const config: Config = {
@@ -183,11 +213,17 @@ namespace ClassroomTA {
     return config;
   }
 
-  export function GetAttachmentType(attachment: GoogleAppsScript.Classroom.Schema.Attachment) {
-    return attachment.driveFile != undefined ? "Drive file" :
-      attachment.link != undefined ? "Link" :
-        attachment.youTubeVideo != undefined ? "Youtube video" :
-          "Unknown type";
-  }
+  /**
+   * Check the type of a Google Classroom assignment attachment
+   * @param attachment {GoogleAppsScript.Classroom.Schema.Attachment} - The attachment to check
+   * @returns {string} - A string describing the attachment's type
+   */
+  export function GetAttachmentType(attachment: GoogleAppsScript.Classroom.Schema.Attachment): string {
 
+    if (attachment.driveFile != undefined) return "Drive file";
+    if (attachment.link != undefined) return "Link";
+    if (attachment.youTubeVideo != undefined) return "Youtube video";
+
+    return "Unknown type";
+  }
 }
