@@ -231,6 +231,7 @@ namespace StudentGradingSheetTA {
 
     // -- PREP RANGES & VALUES
     const targetStudentRange = MasterGradingSheetTA.GetStudentRange(userID, masterGradingSheet);
+
     if (targetStudentRange == null) {
       Browser.msgBox("User ID not found!");
       return;
@@ -249,11 +250,11 @@ namespace StudentGradingSheetTA {
 
       if (isNaN(targetColumnNum)) return;
 
-      targetStudentValues[0][targetColumnNum] = row[3];
+      targetStudentValues[0][targetColumnNum] = row[_ColCheckmark - 1];
 
       if (clearAfterTransfer) {
-        if (row[0] === "✔" || row[0] === "✘") row[3] = ["✘"]
-        else row[3] = "";
+        if (row[_ColCheckmark - 1] === "✔" || row[_ColCheckmark - 1] === "✘") row[_ColCheckmark - 1] = ["✘"]
+        else row[_ColCheckmark - 1] = "";
       }
 
       if (clearAfterTransfer) studentGradingFilterValues[rowNum] = row;
