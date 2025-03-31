@@ -1,10 +1,17 @@
 namespace DocsTA {
+  /**
+   * Get a list of Dates when the given Google Docs document was edited 
+   * @param docUrl {string} The url of the document
+   * @param userID {string} [undefined] If used, only changes made by that user will be included
+   * @returns {Date[]} An array of dates
+   */
   export function GetEditDates(docUrl: string, userID?: string): Date[] {
 
+    // -- PREP
     let editTimestamps: Date[] = [];
     const document = DocumentApp.openByUrl(docUrl);
 
-    // Get all edits
+    // -- GET EDITS
     let result = DriveActivity.Activity?.query({
       "ancestorName": "items/" + document.getId(),
       "filter": "detail.action_detail_case:EDIT"
@@ -12,11 +19,11 @@ namespace DocsTA {
 
     if (!result) return [];
 
-    // Go through all edits
+    // -- PROCESS EDITS
     result.activities?.forEach(activity => {
       if (!activity.actors) return;
 
-      // Go through all editors
+      // -- PROCESS EDIT'S EDITORS
       activity.actors.forEach(actor => {
         if (!actor.user?.knownUser?.personName
           || !activity.timestamp

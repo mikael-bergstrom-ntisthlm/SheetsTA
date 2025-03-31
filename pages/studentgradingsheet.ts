@@ -1,43 +1,6 @@
 /// <reference path="../libs/rubrics.ts" />
 /// <reference path="../pages/mastergradingsheet.ts" />
 
-
-function Test() {
-
-  const spreadsheet = SpreadsheetApp.getActive();
-  // const spreadsheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1E7SV82BqJbA4Qt0vYGATCxF7pXAT7YniXFmovSKRH30/");
-
-  // Teoriprov
-  // const spreadsheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1J-_WeDj_QVBR_lF-kGIwEYTNXSleRV3RsOlsHjs5nSs/");
-
-  const masterGradingSheet = spreadsheet.getSheetByName("Bedömning");
-  if (!masterGradingSheet) return;
-
-  const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", SpreadsheetApp.getActive(), false);
-  if (!studentGradingSheet) return;
-
-  StudentGradingSheetTA.ImportFromMasterSheet(
-    "115898972864944841723",
-    masterGradingSheet,
-    studentGradingSheet
-  )
-
-
-
-  // StudentGradingSheetTA.GetStudentNameIds(masterGradingSheet);
-
-  // StudentGradingSheetTA.Setup.CreateOrUpdateStudentGradingSheet(spreadsheet, "Bedömning");
-
-
-  // let userId = "115898972864944841723";
-  // let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
-
-
-  // StudentGradingSheetTA.TransferToMasterSheet(userId, masterGradingSheet, studentGradingSheet, false);
-
-
-}
-
 namespace StudentGradingSheetTA {
 
   const _ColRubric: number = 1;
@@ -48,28 +11,35 @@ namespace StudentGradingSheetTA {
   const _ColActive: number = 6;
 
   const _HeaderRow: number = 3;
-
-  type RowProcessor = (row: any[], rowNum: number, data: any[]) => void;
+  const _EditBoxColor: number[] = [217, 234, 211];
 
   export namespace Setup {
     export function CreateOrUpdateStudentGradingSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet, masterGradingSheetName: string) {
 
-      // PREP
+      // -- PREP
       const masterGradingSheet = spreadsheet.getSheetByName(masterGradingSheetName);
       if (!masterGradingSheet) return;
 
       const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", spreadsheet, true);
       if (!studentGradingSheet) return;
 
-      // CLEAR & CLEAN
+      // -- CLEAR & CLEAN
       studentGradingSheet.clear();
       studentGradingSheet.getFilter()?.remove();
 
-      // SETUP BLOCKS
+      studentGradingSheet.getRange(1, 1,
+        studentGradingSheet.getMaxRows(),
+        studentGradingSheet.getMaxColumns())
+        .removeCheckboxes()
+        .getMergedRanges().forEach(mergedRange => mergedRange.breakApart());
+
+      // TODO: Remove checkmarks, allow page to grow
+
+      // -- SETUP BLOCKS
       SetupHeaderBlock(studentGradingSheet, masterGradingSheet);
       SetupRubricsBlock(studentGradingSheet, masterGradingSheet);
 
-      // SET WIDTHS
+      // -- SET WIDTHS
       studentGradingSheet
         .setColumnWidth(_ColRubric, 223)
         .setColumnWidth(_ColCriteria, 275)
@@ -77,7 +47,7 @@ namespace StudentGradingSheetTA {
         .setColumnWidth(_ColActive, 70)
         .hideColumns(_ColColnum);
 
-      // TRIMMING
+      // -- TRIMMING
       TrimSheetToContents(studentGradingSheet, 1);
     }
 
@@ -144,6 +114,18 @@ namespace StudentGradingSheetTA {
         FormatRubricBlock(rubric, studentGradingSheet, rubricBlockStartRow)
       });
 
+      // Comment row
+      dataValues[row + 1][_ColCriteria - 1] = "Comment";
+      // TODO: Target column number for comment
+
+      dataRange.offset(row + 1, _ColCriteria - 1, 1, 1)
+        .setHorizontalAlignment("right")
+        .setFontWeight("bold")
+        .offset(0, 2, 1, 3) // get writing box
+        .setBackgroundRGB(_EditBoxColor[0], _EditBoxColor[1], _EditBoxColor[2])
+        .merge();
+
+
       dataRange.setValues(dataValues);
 
       // General formatting
@@ -175,7 +157,7 @@ namespace StudentGradingSheetTA {
       studentGradingSheet.getRange(rubricBlockStartRow + rubric.criteria.length, _ColCheckmark, 1, 1)
         .setHorizontalAlignment("center")
         .setFontWeight("bold")
-        .setBackgroundRGB(217, 234, 211);
+        .setBackgroundRGB(_EditBoxColor[0], _EditBoxColor[1], _EditBoxColor[2])
     }
 
     function SetFilter(rubrics: RubricsTA.Rubric[], dataRange: GoogleAppsScript.Spreadsheet.Range) {
@@ -197,15 +179,20 @@ namespace StudentGradingSheetTA {
       const lastColumn = studentGradingSheet.getLastColumn();
       const lastRow = studentGradingSheet.getLastRow();
 
-      studentGradingSheet.deleteColumns(
-        lastColumn + margin,
-        studentGradingSheet.getMaxColumns() - lastColumn - margin
-      );
+      const currentColumns = studentGradingSheet.getMaxColumns();
+      const currentRows = studentGradingSheet.getMaxRows();
 
-      studentGradingSheet.deleteRows(
-        lastRow + margin,
-        studentGradingSheet.getMaxRows() - lastRow - margin
-      );
+      if (currentColumns > lastColumn + margin)
+        studentGradingSheet.deleteColumns(
+          lastColumn + margin,
+          currentColumns - lastColumn - margin
+        );
+
+      if (currentRows > lastRow + margin)
+        studentGradingSheet.deleteRows(
+          lastRow + margin,
+          currentRows - lastRow - margin
+        );
     }
   }
 
@@ -222,22 +209,28 @@ namespace StudentGradingSheetTA {
     });
 
     checkmarkRange.setValues(checkmarkValues);
+
+    ClearSelectedUserId(studentGradingSheet);
   }
 
-  export function TransferToMasterSheet(userID: string,
+  export function TransferToMasterSheet(
     masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
     clearAfterTransfer: boolean) {
 
-    // -- PREP RANGES & VALUES
-    const targetStudentRange = MasterGradingSheetTA.GetStudentRange(userID, masterGradingSheet);
+    let userId = GetSelectedUserId(studentGradingSheet);
+    if (userId === "") return;
 
-    if (targetStudentRange == null) {
+    // -- PREP RANGES & VALUES
+    const targetStudentData = MasterGradingSheetTA.GetStudentData(userId, masterGradingSheet);
+
+    if (targetStudentData == null) {
       Browser.msgBox("User ID not found!");
       return;
     }
 
-    const targetStudentValues = targetStudentRange.getValues();
+    const targetStudentValues = targetStudentData.dataRange?.getValues();
+    if (!targetStudentValues) return;
 
     const studentGradingFilterRange = studentGradingSheet.getFilter()?.getRange();
     if (!studentGradingFilterRange) return;
@@ -261,25 +254,28 @@ namespace StudentGradingSheetTA {
     });
 
     // -- POST-PROCESS
-    targetStudentRange.setValues(targetStudentValues);
+    targetStudentData.dataRange?.setValues(targetStudentValues);
+    if (!targetStudentData) return;
 
     if (clearAfterTransfer) {
       studentGradingFilterRange.setValues(studentGradingFilterValues); // Jesus christ is this really necessary
+      ClearSelectedUserId(studentGradingSheet);
     }
   }
 
-  export function ImportFromMasterSheet(userID: string,
+  export function ImportFromMasterSheet(userId: string,
     masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
     // -- PREP RANGES & VALUES
-    const sourceStudentRange = MasterGradingSheetTA.GetStudentRange(userID, masterGradingSheet);
-    if (sourceStudentRange == null) {
+    const sourceStudentData = MasterGradingSheetTA.GetStudentData(userId, masterGradingSheet);
+    if (sourceStudentData == null) {
       Browser.msgBox("User ID not found!");
       return;
     }
 
-    const sourceStudentValues = sourceStudentRange.getValues()[0];
+    const sourceStudentValues = sourceStudentData?.dataRange?.getValues()[0];
+    if (!sourceStudentValues) return;
 
     const studentGradingFilterRange = studentGradingSheet.getFilter()?.getRange();
     if (!studentGradingFilterRange) return;
@@ -317,5 +313,9 @@ namespace StudentGradingSheetTA {
     }
 
     return pair[1].trim();
+  }
+
+  function ClearSelectedUserId(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    studentGradingSheet.getRange(1, 2).setValue("");
   }
 }

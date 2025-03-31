@@ -7,8 +7,6 @@
 /// <reference path="./libs/rubrics.ts" />
 /// <reference path="./pages/studentgradingsheet.ts" />
 
-
-
 function SheetsTASetup() { Menu.Setup("SheetsTA."); }
 function SheetsTAInternal() { Menu.Setup(""); }
 
@@ -47,7 +45,9 @@ export namespace Menu {
     let range = SpreadsheetApp.getActiveSheet().getActiveRange();
     if (!range) return;
 
-    const config = ClassroomTA.GetConfigFromRange(range);
+    const config = ConfigTA.GetFromRange(range);
+    if (!config) return;
+
     let rosterOrigo = range.offset(range.getHeight(), 0, 1, 1);
 
     const values = ClassroomTA.GetRoster(config);
@@ -59,7 +59,8 @@ export namespace Menu {
     const range = SpreadsheetApp.getActiveSheet().getActiveRange();
     if (!range) return;
 
-    let config = ClassroomTA.GetConfigFromRange(range);
+    let config = ConfigTA.GetFromRange(range);
+    if (!config) return;
 
     if (config.pairs.length < 1 || config.pairs[0].courseID == "" || config.pairs[0].courseworkID == "") {
       SpreadsheetApp.getUi().alert("Expected one or more course/assignment pair in selected cell");
@@ -76,7 +77,9 @@ export namespace Menu {
     const range = SpreadsheetApp.getActiveSheet().getActiveRange();
     if (!range) return;
 
-    let config = ClassroomTA.GetConfigFromRange(range);
+    let config = ConfigTA.GetFromRange(range);
+    if (!config) return;
+
     let assignmentsSheetOrigo = range.offset(range.getHeight(), 0, 1, 1);
 
     const values = ClassroomTA.GetAssignments(config);
@@ -126,21 +129,21 @@ export namespace Menu {
   export function UpdateRoster() {
     let spreadsheet = SpreadsheetApp.getActive();
 
-    let masterConfig = MasterDocument.GetMasterConfig(spreadsheet);
+    let masterConfig = MasterDocumentTA.GetMasterConfig(spreadsheet);
     if (!masterConfig || !masterConfig.pairs) return;
 
     // Rosterize
-    MasterDocument.UpdateRoster(masterConfig, spreadsheet);
+    MasterDocumentTA.UpdateRoster(masterConfig, spreadsheet);
   }
 
   export function UpdateSubmissions() {
     let spreadsheet = SpreadsheetApp.getActive();
 
-    let masterConfig = MasterDocument.GetMasterConfig(spreadsheet);
+    let masterConfig = MasterDocumentTA.GetMasterConfig(spreadsheet);
     if (!masterConfig || !masterConfig.pairs) return;
 
     // Update submissions
-    MasterDocument.UpdateSubmissions(masterConfig, spreadsheet);
+    MasterDocumentTA.UpdateSubmissions(masterConfig, spreadsheet);
 
   }
 
@@ -178,11 +181,7 @@ export namespace Menu {
     const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
     if (!studentGradingSheet) return;
 
-    let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
-    if (userId === "") return;
-
     StudentGradingSheetTA.TransferToMasterSheet(
-      userId,
       masterGradingSheet,
       studentGradingSheet, true);
   }
@@ -224,8 +223,10 @@ x MIME types of attachments
     x Clear sheet
     x Copy sheet data back to overview from grading page
   x Remove unnecessary rows & cols from grading sheet
-  - Copy student's info from overview to grading page
+  x Copy student's info from overview to grading page
+  - Clear student name when copying stuff to the master sheet
   - Add box for comment to student
+  - Warn if overwriting?
   - Give Grade columns the right active/inactive bool
   - ?? Defaults for grades (+configurable?)
 

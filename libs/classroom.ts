@@ -1,6 +1,7 @@
 /// <reference path="./github.ts" />
-/// <reference path="./interfaces.ts" />
 /// <reference path="./drive.ts" />
+/// <reference path="./config.ts" />
+
 
 namespace ClassroomTA {
   /**
@@ -8,10 +9,13 @@ namespace ClassroomTA {
    * @param config {Config} The config object to use; will contain info on what classrooms to get rosters from
    * @returns {string[][]} A two-dimensional array; an array of rows containing student data. First row is headers. Each row (inner array) will contain) columns: Classroom (name), Course ID, Name, Surname, Email, UserID.
    */
-  export function GetRoster(config: Config): string[][] {
+  export function GetRoster(config: ConfigTA.Config): string[][] {
     let rosterValues: string[][] = [["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"]];
 
+    // -- PROCESS CONFIG PAIRS
     config.pairs.forEach(pair => {
+
+      // -- GET STUDENT LIST OF CLASSROOM
 
       // "1" means second column, where CourseID is stored
       if (rosterValues.some(row => row[1] === pair.courseID)) return; // Skip if course's roster is already processed
@@ -19,6 +23,8 @@ namespace ClassroomTA {
       const classroomName = Classroom.Courses?.get(pair.courseID).name ?? "unnamed classroom";
 
       let nextPageToken: string = "";
+
+      // -- PROCESS STUDENT LIST
 
       do { // For each page of results
 
@@ -64,7 +70,7 @@ namespace ClassroomTA {
    * @param config {Config} The config object to use; will contain info on what classrooms to get assignments from
    * @returns {string[][]} A two-dimensional array; an array of rows containing assignment data. First row is headers. Each row (inner array) will contain) columns: Title, CourseID, CourseworkID
    */
-  export function GetAssignments(config: Config): string[][] {
+  export function GetAssignments(config: ConfigTA.Config): string[][] {
     let values: string[][] = [["Title", "CourseID", "CourseworkID"]];
 
     config.pairs.forEach(pair => {
@@ -134,7 +140,7 @@ namespace ClassroomTA {
    * @param config {Config} The config object to use; will contain info on what classrooms & assignments to get submissions from
    * @returns {string[][]} A two-dimensional array; an array of rows containing submission attachment data. First row is headers. Each row (inner array) will contain) columns: UserID, CourseID, CourseworkID (assignment ID), State (turned in, created etc), MIME, Submission URL.
    */
-  export function GetStudentSubmissions(config: Config): string[][] {
+  export function GetStudentSubmissions(config: ConfigTA.Config): string[][] {
     let submissionValues: string[][] = [["UserID", "CourseID", "CourseworkID", "State", "Type", "MIME", "Submission URL"]];
 
     config.pairs.forEach(pair => {
@@ -162,7 +168,7 @@ namespace ClassroomTA {
             // Prepare data
             const attachmentUrl = attachment.driveFile?.alternateLink ?? attachment.link?.url ?? attachment.youTubeVideo?.alternateLink ?? "unknown url";
             let attachmentType = GetAttachmentType(attachment)
-            let attachmentMimeType = DriveTA.GetFileMimeType(attachment);
+            let attachmentMimeType = GetFileMimeType(attachment);
 
             submissionValues.push([
               submission.userId ?? "",
@@ -185,34 +191,6 @@ namespace ClassroomTA {
     return submissionValues;
   }
 
-  // ----------------------------------------------------------------------------
-  //  HELPERS
-
-  // TODO: Generalize this, reuse in master document
-  export function GetConfigFromRange(range: GoogleAppsScript.Spreadsheet.Range): Config {
-
-    const config: Config = {
-      pairs: []
-    }
-
-    let cellContents: string = String(range?.getValue());
-
-    const pairs = cellContents.split(",");
-
-    pairs.forEach(pair => {
-      const pairSeparated = pair.split("/");
-      config.pairs.push(
-        {
-          courseID: pairSeparated[0].trim(),
-          courseworkID: pairSeparated.length > 1 ? pairSeparated[1].trim() : "",
-          targetSheetName: "_SUBMISSIONS"
-        }
-      )
-    });
-
-    return config;
-  }
-
   /**
    * Check the type of a Google Classroom assignment attachment
    * @param attachment {GoogleAppsScript.Classroom.Schema.Attachment} - The attachment to check
@@ -226,4 +204,20 @@ namespace ClassroomTA {
 
     return "Unknown type";
   }
+
+    /**
+   * Securely get the Mime type of a Classroom attachment
+   * @param attachment {GoogleAppsScript.Classroom.Schema.Attachment} The attachment to analyze
+   * @returns {string} The attachment's mimetype
+   */
+    export function GetFileMimeType(attachment: GoogleAppsScript.Classroom.Schema.Attachment): string {
+      if (attachment.driveFile == undefined
+        || attachment.driveFile.id == undefined
+      ) return "";
+  
+      const file = Drive.Files?.get(attachment.driveFile.id);
+      if (!file?.mimeType) return "";
+  
+      return file.mimeType
+    }
 }

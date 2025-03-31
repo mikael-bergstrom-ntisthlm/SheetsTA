@@ -3,7 +3,6 @@ namespace GithubTA {
   export function InterpretURL(url: string): GitRepo | undefined {
 
     const re = new RegExp("https?:\/\/.*github.com\/(?<user>[^/]+)\/(?<repo>[^/]+)\/*.*$");
-    // https?:\/\/.*github.com\/(?<user>.+?)\/(?<repo>.+?)[\/$]*
 
     let result = re.exec(url)?.groups;
     if (!result) return undefined;

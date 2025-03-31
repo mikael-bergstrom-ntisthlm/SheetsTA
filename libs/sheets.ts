@@ -49,20 +49,20 @@ namespace SheetsTA {
     return sheet;
   }
 
-  export function GetColumnNum(columnHeading: string, sheet: GoogleAppsScript.Spreadsheet.Sheet, headingRowNumber: number): number {
+  // export function GetColumnNum(columnHeading: string, sheet: GoogleAppsScript.Spreadsheet.Sheet, headingRowNumber: number): number {
 
-    const headingRow = sheet.getRange(headingRowNumber, 1, 1, sheet.getMaxColumns())
-    const headingRowValues = headingRow.getValues()[0];
+  //   const headingRow = sheet.getRange(headingRowNumber, 1, 1, sheet.getMaxColumns())
+  //   const headingRowValues = headingRow.getValues()[0];
 
-    for (let i = 0; i < headingRowValues.length; i++) {
-      if (
-        String(headingRowValues[i]) 
-          .localeCompare(columnHeading, undefined, { sensitivity: 'accent' }) === 0) {
+  //   for (let i = 0; i < headingRowValues.length; i++) {
+  //     if (
+  //       String(headingRowValues[i]) 
+  //         .localeCompare(columnHeading, undefined, { sensitivity: 'accent' }) === 0) {
 
-        return i + 1;
-      }
-    }
+  //       return i + 1;
+  //     }
+  //   }
 
-    return -1;
-  }
+  //   return -1;
+  // }
 }

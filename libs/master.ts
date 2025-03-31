@@ -1,7 +1,7 @@
 /// <reference path="./classroom.ts" />
 /// <reference path="./sheets.ts" />
 
-namespace MasterDocument {
+namespace MasterDocumentTA {
   export function Setup(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
 
     let masterConfig = GetMasterConfig(spreadsheet);
@@ -22,19 +22,20 @@ namespace MasterDocument {
       return;
     }
 
-    return GetConfigFromSetupSheet(setupSheet);
+    return ConfigTA.GetFromRange(setupSheet.getRange("A1:C"))
+    // return GetConfigFromSetupSheet(setupSheet);
   }
 
-  export function UpdateRoster(masterConfig: Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
+  export function UpdateRoster(masterConfig: ConfigTA.Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
     const rosterOrigo = SheetsTA.CreateOrGetSheet("_ROSTER", spreadsheet, true).getRange(1, 1);
     const rosterValues = ClassroomTA.GetRoster(masterConfig);
     SheetsTA.InsertValuesAt(rosterValues, rosterOrigo);
   }
 
-  export function UpdateSubmissions(masterConfig: Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
+  export function UpdateSubmissions(masterConfig: ConfigTA.Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
     
     // Split into multiple config based on target sheet
-    const configs: Map<string, Config> = ConfigSplitByTargetSheet(masterConfig);
+    const configs: Map<string, ConfigTA.Config> = ConfigSplitByTargetSheet(masterConfig);
 
     configs.forEach((config, targetSheet) => {
 
@@ -46,8 +47,8 @@ namespace MasterDocument {
     });
   }
 
-  function ConfigSplitByTargetSheet(masterConfig: Config) {
-    const configs: Map<string, Config> = new Map();
+  function ConfigSplitByTargetSheet(masterConfig: ConfigTA.Config) {
+    const configs: Map<string, ConfigTA.Config> = new Map();
 
     masterConfig.pairs.forEach(pair => {
       let key = pair.targetSheetName;
@@ -61,38 +62,5 @@ namespace MasterDocument {
     });
 
     return configs;
-  }
-
-  export function GetConfigFromSetupSheet(setupSheet: GoogleAppsScript.Spreadsheet.Sheet) {
-    let pairValues = setupSheet?.getRange("A1:C").getValues();
-    if (!pairValues) return;
-
-    const config: Config = {
-      gitFormat: "",
-      driveFormat: "",
-      pairs: []
-    }
-
-    pairValues?.forEach(row => {
-      if (row[0] == "" || row[1] == "") return;
-
-      // All IDs are 100% numbers
-      if (!isNaN(parseFloat(row[0]))) {
-
-        config.pairs.push({
-          courseID: String(row[0]),
-          courseworkID: String(row[1]),
-          targetSheetName: String(row[2])
-        });
-      }
-      else if (row[0] == "git") {
-        config.gitFormat = row[1];
-      }
-      else if (row[0] == "drive") {
-        config.driveFormat = row[1];
-      }
-    });
-
-    return config;
   }
 }
