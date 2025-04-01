@@ -30,7 +30,6 @@ Maybe this process will be simplified or better explained later. Don't hold your
 
 ## Plans
 * Implementing the project as a proper standalone library?
-* Adding more grading support, with rubrics
 * More granular control over how and if to filter activity dates for github links (using email adresses? Adding email adresses to the roster?) and docs pages
 * Maybe some kind of optional subpages with readymade filters for github / docs submissions, and activity logging?
 * Maybe some sort of simplified/visual way to generate _CONFIG page for master document?

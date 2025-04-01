@@ -23,21 +23,21 @@ namespace StudentGradingSheetTA {
       const studentGradingSheet = SheetsTA.CreateOrGetSheet("_STUDENTGRADE", spreadsheet, true);
       if (!studentGradingSheet) return;
 
-      // -- CLEAR & CLEAN
-      studentGradingSheet.clear();
-      studentGradingSheet.getFilter()?.remove();
+      const rubrics = RubricsTA.GetRubrics(masterGradingSheet);
 
-      studentGradingSheet.getRange(1, 1,
-        studentGradingSheet.getMaxRows(),
-        studentGradingSheet.getMaxColumns())
-        .removeCheckboxes()
-        .getMergedRanges().forEach(mergedRange => mergedRange.breakApart());
+      // -- CLEAR & SET SIZE
+      SheetsTA.ClearSheet(studentGradingSheet);
 
-      // TODO: Remove checkmarks, allow page to grow
+      const totalHeight = _HeaderRow
+        + RubricsTA.CountCriteria(rubrics)
+        + rubrics.length * 2 // Space for grade + spacing
+        + 3; // Space for comment block
+      
+      SheetsTA.SetSheetSize(studentGradingSheet, 8, totalHeight);
 
       // -- SETUP BLOCKS
       SetupHeaderBlock(studentGradingSheet, masterGradingSheet);
-      SetupRubricsBlock(studentGradingSheet, masterGradingSheet);
+      SetupRubricsBlock(studentGradingSheet, rubrics);
 
       // -- SET WIDTHS
       studentGradingSheet
@@ -46,13 +46,12 @@ namespace StudentGradingSheetTA {
         .setColumnWidth(_ColGrade, 70)
         .setColumnWidth(_ColActive, 70)
         .hideColumns(_ColColnum);
-
-      // -- TRIMMING
-      TrimSheetToContents(studentGradingSheet, 1);
+      
     }
 
     function SetupHeaderBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
+      // TODO: Replace w/ more general GetStudentData
       const studentNameIds = MasterGradingSheetTA.GetStudentNameIds(rosterGradingSheet);
 
       studentGradingSheet.setFrozenRows(_HeaderRow);
@@ -80,12 +79,11 @@ namespace StudentGradingSheetTA {
       headerRange.setValues(headerValues);
     }
 
-    function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
-      const rubrics = RubricsTA.GetRubrics(masterGradingSheet);
+    function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rubrics: RubricsTA.Rubric[]) {
 
       let rubricStartRow = _HeaderRow + 1;
 
-      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows(), 6);
+      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows() - _HeaderRow, 6);
       const dataValues = dataRange.getValues();
 
       // Insert rows from rubrics
@@ -174,29 +172,9 @@ namespace StudentGradingSheetTA {
       const criteria = SpreadsheetApp.newFilterCriteria().setHiddenValues(["FALSE"]);
       filter.setColumnFilterCriteria(_ColActive, criteria);
     }
-
-    function TrimSheetToContents(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, margin: number) {
-      const lastColumn = studentGradingSheet.getLastColumn();
-      const lastRow = studentGradingSheet.getLastRow();
-
-      const currentColumns = studentGradingSheet.getMaxColumns();
-      const currentRows = studentGradingSheet.getMaxRows();
-
-      if (currentColumns > lastColumn + margin)
-        studentGradingSheet.deleteColumns(
-          lastColumn + margin,
-          currentColumns - lastColumn - margin
-        );
-
-      if (currentRows > lastRow + margin)
-        studentGradingSheet.deleteRows(
-          lastRow + margin,
-          currentRows - lastRow - margin
-        );
-    }
   }
 
-  export function Clear(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function ClearGrading(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
     const checkmarkRange = studentGradingSheet.getRange(
       _HeaderRow + 1,
       _ColCheckmark,

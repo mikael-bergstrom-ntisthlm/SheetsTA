@@ -31,7 +31,9 @@ namespace MasterGradingSheetTA {
     // Get the ID column
     const idColumnRange = masterGradingSheet.getRange(headingRowNumber + 1, _ColUserId, masterGradingSheet.getMaxRows());
 
-    let IDs = idColumnRange.getValues().map(cell => cell[0]).filter(cell => cell.length > 0);
+    let IDs = idColumnRange.getValues()
+      .map(cell => cell[0])
+      .filter(cell => cell.length > 0);
     let rowNum = IDs.findIndex(id => id === userID);
 
     if (rowNum < 0) return null;

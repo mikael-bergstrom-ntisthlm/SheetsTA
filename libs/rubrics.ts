@@ -53,6 +53,14 @@ namespace RubricsTA {
     return rubrics;
   }
 
+  export function CountCriteria(rubrics: Rubric[]): number {
+    return rubrics.reduce(
+      (accumulator, rubric) => {
+        return accumulator + rubric.criteria.length;
+      }, 0
+    )
+  }
+
   export interface Rubric {
     name: string;
     studentGrade?: string;

@@ -1,3 +1,10 @@
+function Test() {
+  let sheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
+  if (!sheet) return;
+
+  SheetsTA.SetSheetSize(sheet, 10, 10);
+}
+
 namespace SheetsTA {
   type RowProcessor = (row: any[]) => string[];
 
@@ -49,20 +56,60 @@ namespace SheetsTA {
     return sheet;
   }
 
-  // export function GetColumnNum(columnHeading: string, sheet: GoogleAppsScript.Spreadsheet.Sheet, headingRowNumber: number): number {
+  export function SetSheetSize(sheet: GoogleAppsScript.Spreadsheet.Sheet, targetWidth: number, targetHeight: number) {
+    const currentHeight = sheet.getMaxRows();
+    const currentWidth = sheet.getMaxColumns();
 
-  //   const headingRow = sheet.getRange(headingRowNumber, 1, 1, sheet.getMaxColumns())
-  //   const headingRowValues = headingRow.getValues()[0];
+    // -- HEIGHT
+    if (currentHeight < targetHeight) {
+      AddEmptyRows(sheet, targetHeight - currentHeight);
+    } else if (currentHeight > targetHeight) {
+      sheet.deleteRows(
+        targetHeight,
+        currentHeight - targetHeight
+      );
+    }
 
-  //   for (let i = 0; i < headingRowValues.length; i++) {
-  //     if (
-  //       String(headingRowValues[i]) 
-  //         .localeCompare(columnHeading, undefined, { sensitivity: 'accent' }) === 0) {
+    // -- WIDTH
+    if (currentWidth < targetWidth) {
+      AddEmptyColumns(sheet, targetWidth - currentWidth);
+    } else if (currentWidth > targetWidth) {
+      sheet.deleteColumns(
+        targetWidth,
+        currentWidth - targetWidth
+      )
+    }
+  }
 
-  //       return i + 1;
-  //     }
-  //   }
+  function AddEmptyRows(sheet: GoogleAppsScript.Spreadsheet.Sheet, rows: number) {
+    let emptyData: string[][] = [];
+    for (let i = 0; i < rows; i++) {
+      emptyData.push([""]);
+    }
 
-  //   return -1;
-  // }
+    const lastRow = sheet.getMaxRows();
+    sheet.getRange(lastRow + 1, 1, rows, emptyData[0].length).setValues(emptyData);
+  }
+
+  function AddEmptyColumns(sheet: GoogleAppsScript.Spreadsheet.Sheet, cols: number) {
+    sheet.insertColumnsAfter(
+      sheet.getMaxColumns(),
+      cols
+    )
+  }
+
+  export function ClearSheet(sheet: GoogleAppsScript.Spreadsheet.Sheet)
+  {
+    sheet.clear();
+    sheet.getFilter()?.remove();
+    sheet.setFrozenRows(0);
+    sheet.setFrozenColumns(0);
+
+    sheet.getRange(1, 1,
+      sheet.getMaxRows(),
+      sheet.getMaxColumns())
+      .removeCheckboxes()
+      .getMergedRanges().forEach(mergedRange => mergedRange.breakApart());
+  }
+
 }
