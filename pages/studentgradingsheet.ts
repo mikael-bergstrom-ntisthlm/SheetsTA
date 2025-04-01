@@ -1,6 +1,18 @@
 /// <reference path="../libs/rubrics.ts" />
 /// <reference path="../pages/mastergradingsheet.ts" />
 
+function Test() {
+  // let sheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+  // if (!sheet) return;
+
+  StudentGradingSheetTA.Setup.CreateOrUpdateStudentGradingSheet(SpreadsheetApp.getActive(), "Bedömning");
+
+  // let result = MasterGradingSheetTA.GetStudentData("105003234631509491556", sheet);
+
+
+  // Logger.log(result);
+}
+
 namespace StudentGradingSheetTA {
 
   const _ColRubric: number = 1;
@@ -10,7 +22,7 @@ namespace StudentGradingSheetTA {
   const _ColGrade: number = 5;
   const _ColActive: number = 6;
 
-  const _HeaderRow: number = 3;
+  const _RowHeader: number = 3;
   const _EditBoxColor: number[] = [217, 234, 211];
 
   export namespace Setup {
@@ -28,7 +40,7 @@ namespace StudentGradingSheetTA {
       // -- CLEAR & SET SIZE
       SheetsTA.ClearSheet(studentGradingSheet);
 
-      const totalHeight = _HeaderRow
+      const totalHeight = _RowHeader
         + RubricsTA.CountCriteria(rubrics)
         + rubrics.length * 2 // Space for grade + spacing
         + 3; // Space for comment block
@@ -49,41 +61,42 @@ namespace StudentGradingSheetTA {
       
     }
 
-    function SetupHeaderBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rosterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    function SetupHeaderBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
-      // TODO: Replace w/ more general GetStudentData
-      const studentNameIds = MasterGradingSheetTA.GetStudentNameIds(rosterGradingSheet);
+      // -- PREP
+      const studentNameIds: string[] = MasterGradingSheetTA.GetStudentsData(masterGradingSheet)
+        .map(student => student.name + " " + student.surname + " | " + student.id);
 
-      studentGradingSheet.setFrozenRows(_HeaderRow);
-
-      // 3 header rows: Student choice, blank, headings
-      const headerRange = studentGradingSheet.getRange(1, 1, studentGradingSheet.getMaxRows(), 6);
-      const headerValues = headerRange.getValues();
-
-      // Setup student name cells
-      headerValues[0][0] = "Student name:";
-      studentGradingSheet.getRange(1, 2, 1, 3).merge();
-
-      let rule = SpreadsheetApp.newDataValidation().requireValueInList(studentNameIds).build();
-      studentGradingSheet.getRange(1, 2)
+        
+        // 3 header rows: Student choice, blank, headings
+        const headerRange = studentGradingSheet.getRange(1, 1, _RowHeader, 6);
+        const headerValues = headerRange.getValues();
+        
+        // Setup student name cells
+        headerValues[0][0] = "Student name:";
+        studentGradingSheet.getRange(1, 2, 1, 3).merge();
+        
+        let rule = SpreadsheetApp.newDataValidation().requireValueInList(studentNameIds).build();
+        studentGradingSheet.getRange(1, 2)
         .setDataValidation(rule);
-
-      // Setup data headers
-      headerValues[2][_ColRubric - 1] = "Rubric";
-      headerValues[2][_ColCriteria - 1] = "Criteria";
-      headerValues[2][_ColColnum - 1] = "Column number";
-      headerValues[2][_ColCheckmark - 1] = "Check";
-      headerValues[2][_ColGrade - 1] = "Grade";
-      headerValues[2][_ColActive - 1] = "Active";
-
-      headerRange.setValues(headerValues);
+        
+        // Setup data headers
+        headerValues[2][_ColRubric - 1] = "Rubric";
+        headerValues[2][_ColCriteria - 1] = "Criteria";
+        headerValues[2][_ColColnum - 1] = "Column number";
+        headerValues[2][_ColCheckmark - 1] = "Check";
+        headerValues[2][_ColGrade - 1] = "Grade";
+        headerValues[2][_ColActive - 1] = "Active";
+        
+        headerRange.setValues(headerValues);
+        studentGradingSheet.setFrozenRows(_RowHeader);
     }
 
     function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rubrics: RubricsTA.Rubric[]) {
 
-      let rubricStartRow = _HeaderRow + 1;
+      let rubricStartRow = _RowHeader + 1;
 
-      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows() - _HeaderRow, 6);
+      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows() - _RowHeader, 6);
       const dataValues = dataRange.getValues();
 
       // Insert rows from rubrics
@@ -112,9 +125,12 @@ namespace StudentGradingSheetTA {
         FormatRubricBlock(rubric, studentGradingSheet, rubricBlockStartRow)
       });
 
-      // Comment row
+      // -- COMMENT ROW
       dataValues[row + 1][_ColCriteria - 1] = "Comment";
-      // TODO: Target column number for comment
+
+      // Offset is 3 because last criteria's colnr + last grade colnr + 2.
+      const commentColNr = 3 + (rubrics.at(-1)?.criteria.at(-1)?.columnNumber ?? 0);
+      dataValues[row + 1][_ColColnum - 1] = commentColNr.toString();
 
       dataRange.offset(row + 1, _ColCriteria - 1, 1, 1)
         .setHorizontalAlignment("right")
@@ -176,9 +192,9 @@ namespace StudentGradingSheetTA {
 
   export function ClearGrading(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
     const checkmarkRange = studentGradingSheet.getRange(
-      _HeaderRow + 1,
+      _RowHeader + 1,
       _ColCheckmark,
-      studentGradingSheet.getMaxRows() - _HeaderRow + 1 // TODO: How to improve speed?
+      studentGradingSheet.getMaxRows() - _RowHeader + 1 // TODO: How to improve speed?
     )
 
     const checkmarkValues = checkmarkRange.getValues().map(row => {
@@ -230,6 +246,8 @@ namespace StudentGradingSheetTA {
 
       if (clearAfterTransfer) studentGradingFilterValues[rowNum] = row;
     });
+
+    // TODO: Implement copying of comment cell
 
     // -- POST-PROCESS
     targetStudentData.dataRange?.setValues(targetStudentValues);

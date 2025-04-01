@@ -14,6 +14,7 @@ namespace MasterGradingSheetTA {
   const _ColSurname = 4;
   const _ColEmail = 5;
   const _ColUserId = 6;
+  const _ColDataStart = 7;
 
   const _RowRubricTitle = 1;
   const _RowCriteriaActive = 2;
@@ -22,62 +23,40 @@ namespace MasterGradingSheetTA {
   const _RowHeading = 5;
   const _RowDataStart = 6;
 
-  // TODO: Rebuild to generate arbitrary data block w/ filter
   export function GetStudentData(userID: string,
-    masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
+    masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ): StudentData | null {
 
-    const headingRowNumber = masterGradingSheet.getFrozenRows();
+    const studentsData = GetStudentsData(masterGradingSheet);
 
-    // Get the ID column
-    const idColumnRange = masterGradingSheet.getRange(headingRowNumber + 1, _ColUserId, masterGradingSheet.getMaxRows());
-
-    let IDs = idColumnRange.getValues()
-      .map(cell => cell[0])
-      .filter(cell => cell.length > 0);
-    let rowNum = IDs.findIndex(id => id === userID);
-
+    let rowNum = studentsData.findIndex(student => student.id === userID);
     if (rowNum < 0) return null;
+    
+    const student = studentsData[rowNum];
+    student.dataRange = masterGradingSheet.getRange(_RowDataStart + rowNum, 1, 1, masterGradingSheet.getMaxColumns())
 
-    const studentRange = masterGradingSheet.getRange(headingRowNumber + rowNum + 1, 1, 1, masterGradingSheet.getMaxColumns())
-    const studentValues = studentRange.getValues()[0];
-
-    return {
-      id: studentValues[_ColUserId],
-      name: studentValues[_ColName],
-      surname: studentValues[_ColSurname],
-      email: studentValues[_ColEmail],
-      dataRange: studentRange
-    }
+    return student;
   }
 
-  export function GetStudentNameIds(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function GetStudentsData(masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
-    const headingRowNumber = masterGradingSheet.getFrozenRows();
-    const dataHeight = masterGradingSheet.getLastRow() - headingRowNumber;
+    const studentValues = masterGradingSheet.getRange(
+      _RowDataStart, 1,
+      masterGradingSheet.getLastRow() - _RowDataStart + 1,
+      _ColDataStart
+    ).getValues()
 
-    let studentIds = GetContentsOfColumn(_ColUserId, dataHeight, masterGradingSheet);
-    let studentSurnames = GetContentsOfColumn(_ColSurname, dataHeight, masterGradingSheet);
-    let studentNames = GetContentsOfColumn(_ColName, dataHeight, masterGradingSheet);
+    const studentsData: StudentData[] = [];
 
-    const studentList: string[] = [];
+    studentValues.forEach(row => {
+      studentsData.push({
+        id: row[_ColUserId - 1],
+        name: row[_ColName - 1],
+        surname: row[_ColSurname - 1],
+        email: row[_ColEmail - 1]
+      });
+    });
 
-    for (let i = 0; i < studentIds.length; i++) {
-      if (studentIds[i] === "") continue;
-
-      studentList.push(
-        studentNames[i] + " " + studentSurnames[i] + " | " + studentIds[i]
-      );
-    }
-
-    return studentList;
-  }
-
-  function GetContentsOfColumn(colNum: number, dataHeight: number, sheet: GoogleAppsScript.Spreadsheet.Sheet): string[] {
-
-    let data = sheet.getRange(_RowDataStart, colNum, dataHeight)
-      .getValues()
-      .map(item => item[0]);
-
-    return data;
+    return studentsData;
   }
 }

@@ -206,14 +206,13 @@ export namespace Menu {
     const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
     if (!studentGradingSheet) return;
 
-    StudentGradingSheetTA.Clear(studentGradingSheet);
+    StudentGradingSheetTA.ClearGrading(studentGradingSheet);
   }
 }
 
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
 
 /* Implement:
-x Make submenus
 x MIME types of attachments
 - Grading support
   x Generate grading page from current overview sheet
@@ -224,20 +223,20 @@ x MIME types of attachments
     x Copy sheet data back to overview from grading page
   x Remove unnecessary rows & cols from grading sheet
   x Copy student's info from overview to grading page
-  - Clear student name when copying stuff to the master sheet
+  x Clear student name when copying stuff to the master sheet
   - Add box for comment to student
   - Warn if overwriting?
   - Give Grade columns the right active/inactive bool
-  - ?? Defaults for grades (+configurable?)
+  ? Defaults for grades (+configurable?)
 
-  - Student response sheets (No more Autocrat!!!)
+- Student response sheets (No more Autocrat!!!)
     - Generate template sheet
     - Generate documents in subfolder
       - with URL
       - Selectively
     - Update documents
 
-  - Generate master overview sheet
+- Generate master overview sheet
     - Based on template
       - Extra info on each student
         - Submission filter/join columns (with formulas)

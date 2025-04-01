@@ -1,10 +1,3 @@
-function Test() {
-  let sheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
-  if (!sheet) return;
-
-  SheetsTA.SetSheetSize(sheet, 10, 10);
-}
-
 namespace SheetsTA {
   type RowProcessor = (row: any[]) => string[];
 
@@ -42,7 +35,7 @@ namespace SheetsTA {
     sheetName: string,
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet, clear: boolean): GoogleAppsScript.Spreadsheet.Sheet {
 
-    spreadsheet.toast("Updating " + sheetName);
+    spreadsheet.toast("Working on " + sheetName);
 
     let sheet = spreadsheet.getSheetByName(sheetName);
     if (!sheet) {
@@ -100,15 +93,20 @@ namespace SheetsTA {
 
   export function ClearSheet(sheet: GoogleAppsScript.Spreadsheet.Sheet)
   {
+    const height = sheet.getMaxRows();
+    const width = sheet.getMaxColumns();
+
     sheet.clear();
     sheet.getFilter()?.remove();
     sheet.setFrozenRows(0);
     sheet.setFrozenColumns(0);
-
+    sheet.showColumns(1, width);
+    
     sheet.getRange(1, 1,
-      sheet.getMaxRows(),
-      sheet.getMaxColumns())
+      height,
+      width)
       .removeCheckboxes()
+      .setDataValidation(null)
       .getMergedRanges().forEach(mergedRange => mergedRange.breakApart());
   }
 

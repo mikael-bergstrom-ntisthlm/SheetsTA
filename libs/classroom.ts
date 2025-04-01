@@ -1,5 +1,4 @@
 /// <reference path="./github.ts" />
-/// <reference path="./drive.ts" />
 /// <reference path="./config.ts" />
 
 

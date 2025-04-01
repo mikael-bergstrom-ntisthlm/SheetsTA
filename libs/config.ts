@@ -32,11 +32,12 @@ namespace ConfigTA {
       pairs: []
     }
 
+    // -- PROCESS
     configValues?.forEach(row => {
       // Skip empty rows
       if (row[0] == "" || row[1] == "") return;
 
-      // All IDs are 100% numbers
+      // All IDs are 100% numbers so use that to identify course IDs
       if (!isNaN(parseInt(row[0]))) {
         config.pairs.push({
           courseID: String(row[0]),
@@ -44,7 +45,7 @@ namespace ConfigTA {
           targetSheetName: row.length > 2 ? String(row[2]) : "_"
         });
       }
-      else if (row[0] == "git") {
+      else if (row[0] == "git") { // What was this for? Don't remember.
         config.gitFormat = row[1];
       }
       else if (row[0] == "drive") {
