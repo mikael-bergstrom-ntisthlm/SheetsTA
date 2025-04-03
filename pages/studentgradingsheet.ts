@@ -6,7 +6,6 @@ function Test() {
   let gradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
   if (masterSheet == null || gradingSheet == null) return;
 
-  StudentGradingSheetTA.TransferToMasterSheet(masterSheet, gradingSheet, false);
 }
 
 namespace StudentGradingSheetTA {
@@ -27,8 +26,10 @@ namespace StudentGradingSheetTA {
   }
 
   export namespace Setup {
-    export function CreateOrUpdateStudentGradingSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet, masterGradingSheetName: string) {
-
+    export function CreateOrUpdateStudentGradingSheet(
+      spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
+      masterGradingSheetName: string
+    ) {
       // -- PREP
       const masterGradingSheet = spreadsheet.getSheetByName(masterGradingSheetName);
       if (!masterGradingSheet) return;
@@ -62,7 +63,10 @@ namespace StudentGradingSheetTA {
 
     }
 
-    function SetupHeaderBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    function SetupHeaderBlock(
+      studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+      masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
+    ) {
 
       // -- PREP
       const studentNameIds: string[] = MasterGradingSheetTA.GetStudentsData(masterGradingSheet)
@@ -94,7 +98,10 @@ namespace StudentGradingSheetTA {
     }
 
     // TODO: Generalize tis, so can be reused at least partly for _TEMPLATE and _VIEW
-    function SetupRubricsBlock(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rubrics: RubricsTA.Rubric[]) {
+    function SetupRubricsBlock(
+      studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+      rubrics: RubricsTA.Rubric[]
+    ) {
 
       let rubricStartRow = _RowHeader + 1;
 
@@ -152,7 +159,11 @@ namespace StudentGradingSheetTA {
       SetFilter(rubrics, dataRange);
     }
 
-    function FormatRubricBlock(rubric: RubricsTA.Rubric, studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet, rubricBlockStartRow: number) {
+    function FormatRubricBlock(
+      rubric: RubricsTA.Rubric,
+      studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+      rubricBlockStartRow: number
+    ) {
 
       // Rubric label block
       studentGradingSheet.getRange(rubricBlockStartRow, _ColRubric, rubric.criteria.length + 1, 1)
@@ -209,62 +220,33 @@ namespace StudentGradingSheetTA {
     ClearSelectedUserId(studentGradingSheet);
   }
 
-  function ProcessWithMasterSheet(
-    masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ) {
-
-  }
-
-  export function TransferToMasterSheet(
+  function GetSyncDataPairs(
     masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    clearAfterTransfer: boolean
-  ) {
-
+    userId: string
+  ): {masterData: RangeValuePair, gradingData: RangeValuePair } | null {
     // -- PREP RANGES & VALUES
-    const userId = GetSelectedUserId(studentGradingSheet);
-    if (userId === "") return;
 
     // Get target range & values
-    const targetStudentData = MasterGradingSheetTA.GetStudentData(userId, masterGradingSheet);
+    const masterDataRange = MasterGradingSheetTA.GetStudentData(userId, masterGradingSheet);
 
-    if (targetStudentData === null) {
+    if (!masterDataRange?.dataRange) {
       Browser.msgBox("User ID not found!");
-      return;
+      return null;
     }
 
-    const targetStudentValues = targetStudentData.dataRange?.getValues();
-    if (!targetStudentValues) return;
+    const masterData: RangeValuePair = {
+      range: masterDataRange.dataRange,
+      values: masterDataRange.dataRange.getValues()
+    }
+
+    const targetStudentValues = masterDataRange.dataRange?.getValues();
+    if (!targetStudentValues) return null;
 
     // Get grading data range & values
     const gradingData = GetGradingData(studentGradingSheet);
 
-    // -- PROCESS
-    gradingData.values?.forEach((row, rowNum) => {
-
-      let targetColumnNum = parseInt(row[_ColColnum - 1]);
-
-      if (isNaN(targetColumnNum)) return;
-
-      targetStudentValues[0][targetColumnNum] = row[_ColCheckmark - 1];
-
-      if (clearAfterTransfer) {
-        if (row[_ColCheckmark - 1] === "✔" || row[_ColCheckmark - 1] === "✘") row[_ColCheckmark - 1] = ["✘"]
-        else row[_ColCheckmark - 1] = "";
-      }
-
-      if (clearAfterTransfer) gradingData.values[rowNum] = row;
-    });
-
-    // -- POST-PROCESS
-    targetStudentData.dataRange?.setValues(targetStudentValues);
-    if (!targetStudentData) return;
-
-    if (clearAfterTransfer) {
-      gradingData.range.setValues(gradingData.values);
-      ClearSelectedUserId(studentGradingSheet);
-    }
+    return { masterData, gradingData }
   }
 
   function GetGradingData(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): RangeValuePair {
@@ -279,31 +261,60 @@ namespace StudentGradingSheetTA {
     };
   }
 
-  export function ImportFromMasterSheet(userId: string,
+  export function TransferToMasterSheet(
     masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    userId: string,
+    clearAfterTransfer: boolean
+  ) {
 
-    // -- PREP RANGES & VALUES
-    const sourceStudentData = MasterGradingSheetTA.GetStudentData(userId, masterGradingSheet);
-    if (sourceStudentData == null) {
-      Browser.msgBox("User ID not found!");
-      return;
-    }
-
-    const sourceStudentValues = sourceStudentData?.dataRange?.getValues()[0];
-    if (!sourceStudentValues) return;
-
-    // Get grading data range & values
-    const gradingData = GetGradingData(studentGradingSheet);
+    let pairs = GetSyncDataPairs(masterGradingSheet, studentGradingSheet, userId);
+    if (!pairs) return;
+    const { masterData, gradingData } = pairs;
 
     // -- PROCESS
     gradingData.values?.forEach((row, rowNum) => {
-      let sourceColumnNum = parseInt(row[_ColColnum - 1]);
 
+      let targetColumnNum = parseInt(row[_ColColnum - 1]);
+      if (isNaN(targetColumnNum)) return;
+
+      masterData.values[0][targetColumnNum] = row[_ColCheckmark - 1];
+
+      if (clearAfterTransfer) {
+        if (row[_ColCheckmark - 1] === "✔" || row[_ColCheckmark - 1] === "✘") row[_ColCheckmark - 1] = ["✘"]
+        else row[_ColCheckmark - 1] = "";
+      }
+
+      if (clearAfterTransfer) gradingData.values[rowNum] = row;
+    });
+
+    // -- POST-PROCESS
+    masterData.range?.setValues(masterData.values);
+
+    if (clearAfterTransfer) {
+      gradingData.range.setValues(gradingData.values);
+      ClearSelectedUserId(studentGradingSheet);
+    }
+  }
+
+  export function ImportFromMasterSheet(
+    masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    userId: string
+  ) {
+
+    let pairs = GetSyncDataPairs(masterGradingSheet, studentGradingSheet, userId);
+    if (!pairs) return;
+    const { masterData, gradingData } = pairs;
+
+    // -- PROCESS
+    gradingData.values?.forEach((row, rowNum) => {
+
+      let sourceColumnNum = parseInt(row[_ColColnum - 1]);
       if (isNaN(sourceColumnNum)) return;
 
       gradingData.values[rowNum][_ColCheckmark - 1] =
-        sourceStudentValues[sourceColumnNum]
+        masterData.values[0][sourceColumnNum]
     });
 
     // -- POST-PROCESS

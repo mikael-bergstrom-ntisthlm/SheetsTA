@@ -181,9 +181,14 @@ export namespace Menu {
     const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
     if (!studentGradingSheet) return;
 
+    const userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
+    if (userId === "") return null;
+
     StudentGradingSheetTA.TransferToMasterSheet(
       masterGradingSheet,
-      studentGradingSheet, true);
+      studentGradingSheet,
+      userId,
+      true);
   }
 
   export function TransferFromMasterSheet() {
@@ -193,13 +198,13 @@ export namespace Menu {
     const studentGradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
     if (!studentGradingSheet) return;
 
-    let userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
-    if (userId === "") return;
+    const userId = StudentGradingSheetTA.GetSelectedUserId(studentGradingSheet);
+    if (userId === "") return null;
 
     StudentGradingSheetTA.ImportFromMasterSheet(
-      userId,
       masterGradingSheet,
-      studentGradingSheet);
+      studentGradingSheet,
+      userId);
   }
 
   export function ClearStudentGradingSheet() {
