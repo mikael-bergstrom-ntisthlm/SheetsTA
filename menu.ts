@@ -229,8 +229,8 @@ x MIME types of attachments
   x Remove unnecessary rows & cols from grading sheet
   x Copy student's info from overview to grading page
   x Clear student name when copying stuff to the master sheet
-  - Add box for comment to student
-  - Warn if overwriting?
+  x Add box for comment to student
+  x Warn if overwriting?
   - Give Grade columns the right active/inactive bool
   ? Defaults for grades (+configurable?)
 

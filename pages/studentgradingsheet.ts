@@ -20,6 +20,12 @@ namespace StudentGradingSheetTA {
   const _RowHeader: number = 3;
   const _EditBoxColor: number[] = [217, 234, 211];
 
+  enum Erwin {
+    Yes,
+    No,
+    Undefined
+  }
+
   interface RangeValuePair {
     range: GoogleAppsScript.Spreadsheet.Range,
     values: any[][]
@@ -273,20 +279,36 @@ namespace StudentGradingSheetTA {
     const { masterData, gradingData } = pairs;
 
     // -- PROCESS
-    gradingData.values?.forEach((row, rowNum) => {
+    let overrideChecked: boolean = false;
+    let cancelled = gradingData.values?.some((row, rowNum) => {
 
       let targetColumnNum = parseInt(row[_ColColnum - 1]);
       if (isNaN(targetColumnNum)) return;
 
+      if (!masterData.values[0][targetColumnNum] && !overrideChecked)
+      {
+        let answer = Browser.msgBox(
+        "Warning!",
+          "Grading data for student already exists.Overwrite ? ",
+          Browser.Buttons.YES_NO
+        );
+        if (answer === "no") return true;
+        overrideChecked = true;
+      }
+
+      // Transfer data point
       masterData.values[0][targetColumnNum] = row[_ColCheckmark - 1];
 
+      // Reset?
       if (clearAfterTransfer) {
         if (row[_ColCheckmark - 1] === "✔" || row[_ColCheckmark - 1] === "✘") row[_ColCheckmark - 1] = ["✘"]
         else row[_ColCheckmark - 1] = "";
-      }
 
-      if (clearAfterTransfer) gradingData.values[rowNum] = row;
+        gradingData.values[rowNum] = row;
+      }
     });
+
+    if (cancelled) return;
 
     // -- POST-PROCESS
     masterData.range?.setValues(masterData.values);
