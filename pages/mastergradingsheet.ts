@@ -23,6 +23,32 @@ namespace MasterGradingSheetTA {
   const _RowHeading = 5;
   const _RowDataStart = 6;
 
+  export namespace Setup {
+    export function CreateOrUpdateMasterGradingSheet(config: ConfigTA.Config) {
+      // Config - by parameter
+
+      // Make header rows
+
+      // Get rubrics (from... file specified in config?)
+
+      // Topleft quadrant: roster headers
+      // Middle: configurable columns.
+      //   Example: [name:output, type=checkmarks]
+      //            [name:git, type=attachmentlink, source=Länkar, regex=github.com]
+      //            [name:presentation, type=none]
+      // Topright quadrant: rubric blocks
+      //   Calculate total width, get the whole thing in one swath
+      //   First fill in all data
+      //   Then do all the formatting, column widths etc
+      //     Is batching faster?
+
+      // Get roster
+      // Future: If roster already in place, update non-destructively (move student rows to accomodate new students)
+
+    }
+
+  }
+
   export function GetStudentData(userID: string,
     masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
   ): StudentData | null {
@@ -31,7 +57,7 @@ namespace MasterGradingSheetTA {
 
     let rowNum = studentsData.findIndex(student => student.id === userID);
     if (rowNum < 0) return null;
-    
+
     const student = studentsData[rowNum];
     student.dataRange = masterGradingSheet.getRange(_RowDataStart + rowNum, 1, 1, masterGradingSheet.getMaxColumns())
 

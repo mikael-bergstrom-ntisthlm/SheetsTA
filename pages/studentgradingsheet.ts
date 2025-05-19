@@ -1,11 +1,17 @@
 /// <reference path="../libs/rubrics.ts" />
 /// <reference path="../pages/mastergradingsheet.ts" />
+/// <reference path="../pages/detailssheet.ts" />
+
 
 function Test() {
-  let masterSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
-  let gradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
-  if (masterSheet == null || gradingSheet == null) return;
+  // let masterSheet = SpreadsheetApp.getActive().getSheetByName("Bedömning");
+  // let gradingSheet = SpreadsheetApp.getActive().getSheetByName("_STUDENTGRADE");
+  // if (masterSheet == null || gradingSheet == null) return;
 
+  StudentGradingSheetTA.Setup.CreateOrUpdateStudentGradingSheet(
+    SpreadsheetApp.getActive(),
+    "Bedömning"
+  );
 }
 
 namespace StudentGradingSheetTA {
@@ -20,12 +26,6 @@ namespace StudentGradingSheetTA {
   const _RowHeader: number = 3;
   const _EditBoxColor: number[] = [217, 234, 211];
 
-  enum Erwin {
-    Yes,
-    No,
-    Undefined
-  }
-
   interface RangeValuePair {
     range: GoogleAppsScript.Spreadsheet.Range,
     values: any[][]
@@ -36,6 +36,25 @@ namespace StudentGradingSheetTA {
       spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
       masterGradingSheetName: string
     ) {
+
+      const setup: DetailsTA.SheetSetup = {
+        ColRubric: 1,
+        ColCriteria:2,
+        ColColnum:3,
+        ColCheckmark:4,
+        ColGrade:5,
+        ColActive: 6,
+        RowHeader: 3,
+        
+        IncludeCheckboxCol: true,
+        IncludeGradeCol: false,
+        IncludeGradeLine: true,
+        IncludeCommentLine: true,
+    
+        CheckboxColType: "checkable",
+        CheckboxColColorized: true,
+      }
+
       // -- PREP
       const masterGradingSheet = spreadsheet.getSheetByName(masterGradingSheetName);
       if (!masterGradingSheet) return;
@@ -56,7 +75,8 @@ namespace StudentGradingSheetTA {
       SheetsTA.SetSheetSize(studentGradingSheet, 8, totalHeight);
 
       // -- SETUP BLOCKS
-      SetupHeaderBlock(studentGradingSheet, masterGradingSheet);
+      DetailsTA.SetupHeaderBlock(studentGradingSheet, masterGradingSheet, setup);
+
       SetupRubricsBlock(studentGradingSheet, rubrics);
 
       // -- SET WIDTHS
@@ -67,40 +87,6 @@ namespace StudentGradingSheetTA {
         .setColumnWidth(_ColActive, 70)
         .hideColumns(_ColColnum);
 
-    }
-
-    function SetupHeaderBlock(
-      studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-      masterGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
-    ) {
-
-      // -- PREP
-      const studentNameIds: string[] = MasterGradingSheetTA.GetStudentsData(masterGradingSheet)
-        .map(student => student.name + " " + student.surname + " | " + student.id);
-
-
-      // 3 header rows: Student choice, blank, headings
-      const headerRange = studentGradingSheet.getRange(1, 1, _RowHeader, 6);
-      const headerValues = headerRange.getValues();
-
-      // Setup student name cells
-      headerValues[0][0] = "Student name:";
-      studentGradingSheet.getRange(1, 2, 1, 3).merge();
-
-      let rule = SpreadsheetApp.newDataValidation().requireValueInList(studentNameIds).build();
-      studentGradingSheet.getRange(1, 2)
-        .setDataValidation(rule);
-
-      // Setup data headers
-      headerValues[2][_ColRubric - 1] = "Rubric";
-      headerValues[2][_ColCriteria - 1] = "Criteria";
-      headerValues[2][_ColColnum - 1] = "Column number";
-      headerValues[2][_ColCheckmark - 1] = "Check";
-      headerValues[2][_ColGrade - 1] = "Grade";
-      headerValues[2][_ColActive - 1] = "Active";
-
-      headerRange.setValues(headerValues);
-      studentGradingSheet.setFrozenRows(_RowHeader);
     }
 
     // TODO: Generalize tis, so can be reused at least partly for _TEMPLATE and _VIEW
@@ -134,6 +120,7 @@ namespace StudentGradingSheetTA {
         // "Grade" on its own row
         dataValues[row][_ColCriteria - 1] = "Grade";
         dataValues[row][_ColColnum - 1] = rubric.criteria.slice(-1)[0].columnNumber + 1;
+        dataValues[row][_ColActive - 1] = true;
 
         row += 2;
 
@@ -285,7 +272,7 @@ namespace StudentGradingSheetTA {
       let targetColumnNum = parseInt(row[_ColColnum - 1]);
       if (isNaN(targetColumnNum)) return;
 
-      if (!masterData.values[0][targetColumnNum] && !overrideChecked)
+      if (!(masterData.values[0][targetColumnNum].length == 0) && !overrideChecked)
       {
         let answer = Browser.msgBox(
         "Warning!",

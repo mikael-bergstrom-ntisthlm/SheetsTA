@@ -1,6 +1,7 @@
 /// <reference path="./classroom.ts" />
 /// <reference path="./sheets.ts" />
 
+// TODO: Refactor this; structure roster and submissions as pages/ 
 namespace MasterDocumentTA {
   export function Setup(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
 
@@ -23,7 +24,6 @@ namespace MasterDocumentTA {
     }
 
     return ConfigTA.GetFromRange(setupSheet.getRange("A1:C"))
-    // return GetConfigFromSetupSheet(setupSheet);
   }
 
   export function UpdateRoster(masterConfig: ConfigTA.Config, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {

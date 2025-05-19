@@ -77,8 +77,18 @@ export namespace Menu {
     const range = SpreadsheetApp.getActiveSheet().getActiveRange();
     if (!range) return;
 
-    let config = ConfigTA.GetFromRange(range);
-    if (!config) return;
+    // Dummy config, only containing courseID
+    let config: ConfigTA.Config = {
+      pairs: [{
+        targetSheetName: "",
+        courseID: range.getValue(),
+        courseworkID: ""
+      }]
+    };
+    config.pairs.push()
+
+    // let config = ConfigTA.GetFromRange(range);
+    // if (!config) return;
 
     let assignmentsSheetOrigo = range.offset(range.getHeight(), 0, 1, 1);
 
@@ -218,21 +228,13 @@ export namespace Menu {
 // Scopes: https://github.com/labnol/apps-script-starter/blob/master/scopes.md
 
 /* Implement:
-x MIME types of attachments
-- Grading support
-  x Generate grading page from current overview sheet
-    x Rubrics
-    x Checkboxes
-    x Dropdown student names + id
-    x Clear sheet
-    x Copy sheet data back to overview from grading page
-  x Remove unnecessary rows & cols from grading sheet
-  x Copy student's info from overview to grading page
-  x Clear student name when copying stuff to the master sheet
-  x Add box for comment to student
-  x Warn if overwriting?
-  - Give Grade columns the right active/inactive bool
-  ? Defaults for grades (+configurable?)
+
+- Student result overview incl matrix
+  - Generate matrix page
+    - Student name selector
+    - Rubric + criteria overview
+    - Matrix
+  - Load student data
 
 - Student response sheets (No more Autocrat!!!)
     - Generate template sheet
@@ -246,7 +248,6 @@ x MIME types of attachments
       - Extra info on each student
         - Submission filter/join columns (with formulas)
       - Source of rubrics: url
-  
     
 - Make a sidebar with easy access shortcuts questionmark
 - File management
@@ -254,4 +255,27 @@ x MIME types of attachments
 - Moar git
   - Handle github access token
   - _GIT activity page
+*/
+
+/*
+
+  column definition:
+  {
+    header: "Check",
+    type: "Checkbox",
+    source: "CriteriaChecked",
+    color: true
+  },
+  {
+    header: "Grade",
+    type: "text",
+    source: "CriteriaGrade",
+  },
+  {
+    header: "Active",
+    type: "text",
+    source: "CriteriaActive"
+  }
+
+
 */

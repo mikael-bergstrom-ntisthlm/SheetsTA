@@ -1,6 +1,12 @@
 namespace GithubTA {
 
-  export function InterpretURL(url: string): GitRepo | undefined {
+  /**
+   * Create a GitRepo object based on an URL
+   * @param [string] Url the Github URL to be interpreted
+   * @returns [GitRepo | undefined] a GitRepo object if URL was valid; otherwise returns undefined
+   */
+  export function InterpretURL(url: string):
+    GitRepo | undefined {
 
     const re = new RegExp("https?:\/\/.*github.com\/(?<user>[^/]+)\/(?<repo>[^/]+)\/*.*$");
 
@@ -16,11 +22,11 @@ namespace GithubTA {
   export function UrlSanitize(origUrl: string): string {
 
     let repo = InterpretURL(origUrl);
-    
+
     return repo == undefined ? origUrl : BuildWebURL(repo);
   }
 
-  export function GetCommitDates(repo: GitRepo, userEmail?:string): Date[] {
+  export function GetCommitDates(repo: GitRepo, userEmail?: string): Date[] {
     let url = BuildApiRepoURL(repo) + "/commits";
 
     let editTimestamps: Date[] = [];
@@ -31,8 +37,7 @@ namespace GithubTA {
       if (!commits) return [];
 
       commits.forEach(commit => {
-        if (userEmail === undefined || commit.commit.author.email === userEmail)
-        {
+        if (userEmail === undefined || commit.commit.author.email === userEmail) {
           editTimestamps.push(new Date(commit.commit.author.date));
         }
       });
