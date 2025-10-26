@@ -4,23 +4,22 @@
     "enabledAdvancedServices": [
       {
         "userSymbol": "Classroom",
-        "version": "v1",
-        "serviceId": "classroom"
+        "serviceId": "classroom",
+        "version": "v1"
       },
       {
         "userSymbol": "DriveActivity",
-        "version": "v2",
-        "serviceId": "driveactivity"
+        "serviceId": "driveactivity",
+        "version": "v2"
       },
       {
         "userSymbol": "Drive",
-        "version": "v3",
-        "serviceId": "drive"
+        "serviceId": "drive",
+        "version": "v3"
       }
     ]
   },
   "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8",
   "oauthScopes": [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/classroom.courses",
@@ -32,5 +31,6 @@
     "https://www.googleapis.com/auth/drive.activity.readonly",
     "https://www.googleapis.com/auth/drive.metadata.readonly",
     "https://www.googleapis.com/auth/script.external_request"
-  ]
+  ],
+  "runtimeVersion": "V8"
 }

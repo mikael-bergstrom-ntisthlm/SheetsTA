@@ -1,4 +1,4 @@
-namespace GithubTA {
+export namespace GithubTA {
 
   /**
    * Create a GitRepo object based on an URL

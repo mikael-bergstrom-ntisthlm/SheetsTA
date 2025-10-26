@@ -1,4 +1,4 @@
-namespace SheetsTA {
+export namespace SheetsTA {
   type RowProcessor = (row: any[]) => string[];
 
   export function ProcessCurrentRange(processor: RowProcessor) {

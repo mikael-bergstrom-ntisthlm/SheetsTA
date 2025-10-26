@@ -1,8 +1,9 @@
-/// <reference path="./github.ts" />
-/// <reference path="./config.ts" />
+
+import { ConfigTA } from "../../src/libs/config";
+import { GithubTA } from "../../src/libs/github";
 
 
-namespace ClassroomTA {
+export namespace ClassroomTA {
   /**
    * Creates a roster of students by combining student lists from 1+ Google Classrooms
    * @param config {Config} The config object to use; will contain info on what classrooms to get rosters from

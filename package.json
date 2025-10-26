@@ -1,5 +1,52 @@
 {
-  "dependencies": {
-    "@types/google-apps-script": "^1.0.84"
+  "name": "sheets-ta",
+  "version": "2.0",
+  "description": "",
+  "author": {
+    "name": "Mikael Bergström",
+    "email": "krank23@gmail.com"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup --config",
+    "deploy:dev": "yarn run build && yarn clasp push --project .clasp.json.dev",
+    "deploy:prod": "yarn run build && yarn clasp push --project .clasp.json.prod"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/plugin-transform-runtime": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "@google/clasp": "^3.1.0",
+    "@rollup/plugin-babel": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@types/google-apps-script": "^1.0.84",
+    "cross-env": "^10.1.0",
+    "rollup": "^4.52.5",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  },
+  "babel": {
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "node": "current"
+          }
+        }
+      ],
+      "@babel/preset-typescript"
+    ],
+    "plugins": [
+      [
+        "@babel/plugin-transform-runtime",
+        {
+          "regenerator": true
+        }
+      ]
+    ]
   }
 }
