@@ -2,6 +2,7 @@
   "name": "sheets-ta",
   "version": "2.0",
   "description": "",
+  "license": "MIT",
   "author": {
     "name": "Mikael Bergström",
     "email": "krank23@gmail.com"
