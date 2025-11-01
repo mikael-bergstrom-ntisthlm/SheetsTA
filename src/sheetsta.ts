@@ -4,6 +4,7 @@ import { LibGSheets } from "./libs/sheets";
 import { LibGDocs } from "./libs/docs";
 import { LibUtils } from "./libs/utils";
 import { LibGithub } from "./libs/github";
+import { PageMasterConfig } from "./pages/masterconfig";
 
 function Setup() {
   let ui = SpreadsheetApp.getUi();
@@ -18,19 +19,19 @@ function Setup() {
     )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Activity tracking")
-      .addItem("Get document activity (weeks)", "SheetsTA2.GetDocActivityWeeks")
-      .addItem("Get document activity (dates)", "SheetsTA2.GetDocActivityDates")
-      .addSeparator()
-      .addItem("Get github repo activity (weeks)", "SheetsTA2.GetGithubRepoActivityWeeks")
-      .addItem("Get github repo activity (dates)", "SheetsTA2.GetGithubRepoActivityDates")
+        .addItem("Get document activity (weeks)", "SheetsTA2.GetDocActivityWeeks")
+        .addItem("Get document activity (dates)", "SheetsTA2.GetDocActivityDates")
+        .addSeparator()
+        .addItem("Get github repo activity (weeks)", "SheetsTA2.GetGithubRepoActivityWeeks")
+        .addItem("Get github repo activity (dates)", "SheetsTA2.GetGithubRepoActivityDates")
     )
-    // .addSubMenu(
-    //   SpreadsheetApp.getUi().createMenu("Master config")
-    //   // .addItem("Create master config", prefix + "MasterDocument.Create")
-    //   // .addItem("Setup document", prefix + "MasterDocument.Setup")
-    //   // .addItem("Update roster", prefix + "Menu.UpdateRoster")
-    //   // .addItem("Update submissions", prefix + "Menu.UpdateSubmissions")
-    // )
+    .addSubMenu(
+      SpreadsheetApp.getUi().createMenu("Master config")
+      .addItem("Create master config", "SheetsTA2.MasterConfigCreate")
+      //   // .addItem("Setup document", prefix + "MasterDocument.Setup")
+      //   // .addItem("Update roster", prefix + "Menu.UpdateRoster")
+      //   // .addItem("Update submissions", prefix + "Menu.UpdateSubmissions")
+    )
     // .addSubMenu(
     //   SpreadsheetApp.getUi().createMenu("Grading sheets")
     //   // .addItem("Setup student grading sheet", prefix + "Menu.SetupStudentGradingSheet")
@@ -40,14 +41,17 @@ function Setup() {
     // )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Utilities")
-      .addItem("Sanitize Github URLs", "SheetsTA2.SanitizeGithubURLs")
+        .addItem("Sanitize Github URLs", "SheetsTA2.SanitizeGithubURLs")
     )
 
     .addToUi();
   Logger.log("Inited");
 }
 
-// TODO: Move to its own LibDirectManipulation?
+/* -----------------------------------------------------------------------------
+  DIRECT MANIPULATION
+------------------------------------------------------------------------------*/
+
 function GetClassrooms() {
   const classroomsOrigo = SpreadsheetApp
     .getActiveSheet()
@@ -148,6 +152,13 @@ function GetGithubRepoActivity(row: any[], format: string): string[] {
 }
 
 
+/* -----------------------------------------------------------------------------
+  MASTER CONFIG
+------------------------------------------------------------------------------*/
+
+function MasterConfigCreate() {
+  PageMasterConfig.CreateOrUpdateSetupSheet(SpreadsheetApp.getActive());
+}
 
 /* -----------------------------------------------------------------------------
   UTILS
@@ -165,3 +176,6 @@ function SanitizeGithubURLs() {
   }
   range.setValues(values);
 }
+
+// -----------------------------------------------------------------------------
+// TODO: Internationalization, at least sv/en via Session.getActiveUserLocale?
