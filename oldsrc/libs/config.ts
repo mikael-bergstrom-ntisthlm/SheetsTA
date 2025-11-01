@@ -54,4 +54,27 @@ export namespace ConfigTA {
 
     return config;
   }
+
+    /**
+   * Split the pairs of a config into multiple configs based on their target sheet
+   * @param {LibConfig.Config} masterConfig - 
+   * @returns 
+   */
+  function ConfigSplitByTargetSheet(masterConfig: Config): Map<string, Config> {
+
+    const configs: Map<string, Config> = new Map();
+
+    masterConfig.pairs.forEach(pair => {
+      // Use target sheet as key for map; "_SUBMISSIONS" if empty
+      let key = pair.targetSheetName === "" ? "_SUBMISSIONS" : pair.targetSheetName;
+
+      // Key missing? Add it, with an empty config
+      if (!configs.has(key)) configs.set(key, { pairs: [] });
+
+      // Add this pair to the config at the key
+      configs.get(key)?.pairs.push(pair);
+    });
+
+    return configs;
+  }
 }

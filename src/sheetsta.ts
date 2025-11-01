@@ -5,40 +5,45 @@ import { LibGDocs } from "./libs/docs";
 import { LibUtils } from "./libs/utils";
 import { LibGithub } from "./libs/github";
 import { PageMasterConfig } from "./pages/masterconfig";
+import { PageRoster } from "./pages/roster";
+import { PageSubmissions } from "./pages/submissions";
+import { PageStudentGrading } from "./pages/studentgrading";
 
 function Setup() {
   let ui = SpreadsheetApp.getUi();
 
+  const prefix: string = "SheetsTA2.";
+
   ui.createMenu("SheetsTA2")
-    .addItem("Get list of active classrooms", "SheetsTA2.GetClassrooms")
+    .addItem("Get list of active classrooms", `${prefix}GetClassrooms`)
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Selected course ID")
-        .addItem("Get roster from Classroom", "SheetsTA2.GetRoster")
-        .addItem("Get list of assignments", "SheetsTA2.GetAssignments")
-        .addItem("Get student submissions", "SheetsTA2.GetStudentSubmissions")
+        .addItem("Get roster from Classroom", `${prefix}GetRoster`)
+        .addItem("Get list of assignments", `${prefix}GetAssignments`)
+        .addItem("Get student submissions", `${prefix}GetStudentSubmissions`)
     )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Activity tracking")
-        .addItem("Get document activity (weeks)", "SheetsTA2.GetDocActivityWeeks")
-        .addItem("Get document activity (dates)", "SheetsTA2.GetDocActivityDates")
+        .addItem("Get document activity (weeks)", `${prefix}GetDocActivityWeeks`)
+        .addItem("Get document activity (dates)", `${prefix}GetDocActivityDates`)
         .addSeparator()
-        .addItem("Get github repo activity (weeks)", "SheetsTA2.GetGithubRepoActivityWeeks")
-        .addItem("Get github repo activity (dates)", "SheetsTA2.GetGithubRepoActivityDates")
+        .addItem("Get github repo activity (weeks)", `${prefix}GetGithubRepoActivityWeeks`)
+        .addItem("Get github repo activity (dates)", `${prefix}GetGithubRepoActivityDates`)
     )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Master config")
-      .addItem("Create master config", "SheetsTA2.MasterConfigCreate")
-      //   // .addItem("Setup document", prefix + "MasterDocument.Setup")
-      //   // .addItem("Update roster", prefix + "Menu.UpdateRoster")
-      //   // .addItem("Update submissions", prefix + "Menu.UpdateSubmissions")
+        .addItem("Create master config", `${prefix}MasterConfigCreate`)
+        .addItem("Update roster", `${prefix}UpdateRoster`)
+        .addItem("Update submissions", `${prefix}UpdateSubmissions`)
+        .addItem("Update all", `${prefix}UpdateAll`)
     )
-    // .addSubMenu(
-    //   SpreadsheetApp.getUi().createMenu("Grading sheets")
-    //   // .addItem("Setup student grading sheet", prefix + "Menu.SetupStudentGradingSheet")
-    //   // .addItem("Transfer to master grading sheet & clear", prefix + "Menu.TransferToMasterSheet")
-    //   // .addItem("Transfer from master grading sheet", prefix + "Menu.TransferFromMasterSheet")
-    //   // .addItem("Clear student grading sheet", prefix + "Menu.ClearStudentGradingSheet")
-    // )
+    .addSubMenu(
+      SpreadsheetApp.getUi().createMenu("Grading sheets")
+        .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
+        //   // .addItem("Transfer to master grading sheet & clear", prefix + "Menu.TransferToMasterSheet")
+        //   // .addItem("Transfer from master grading sheet", prefix + "Menu.TransferFromMasterSheet")
+        .addItem("Clear student grading sheet", `${prefix}ClearStudentGradingSheet`)
+    )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Utilities")
         .addItem("Sanitize Github URLs", "SheetsTA2.SanitizeGithubURLs")
@@ -51,6 +56,7 @@ function Setup() {
 /* -----------------------------------------------------------------------------
   DIRECT MANIPULATION
 ------------------------------------------------------------------------------*/
+//#region Direct manipulation
 
 function GetClassrooms() {
   const classroomsOrigo = SpreadsheetApp
@@ -108,9 +114,12 @@ function GetStudentSubmissions() {
   LibGSheets.InsertValuesAt(values, submissionsSheetOrigo);
 }
 
+//#endregion
+
 /* -----------------------------------------------------------------------------
   ACTIVITY TRACKING
 ------------------------------------------------------------------------------*/
+//#region Activity tracking
 
 // TODO: Move to its own Activity lib?
 function GetDocActivityWeeks() {
@@ -151,18 +160,63 @@ function GetGithubRepoActivity(row: any[], format: string): string[] {
   return LibUtils.GetUniqueDateStrings(dates, format);
 }
 
+//#endregion
 
 /* -----------------------------------------------------------------------------
   MASTER CONFIG
 ------------------------------------------------------------------------------*/
+//#region Master config
 
 function MasterConfigCreate() {
   PageMasterConfig.CreateOrUpdateSetupSheet(SpreadsheetApp.getActive());
 }
 
+function UpdateRoster() {
+  const spreadsheet = SpreadsheetApp.getActive();
+  const config = PageMasterConfig.GetMasterConfig(spreadsheet)
+  if (!config || !spreadsheet) return;
+  PageRoster.Update(config, spreadsheet);
+}
+
+function UpdateSubmissions() {
+  const spreadsheet = SpreadsheetApp.getActive();
+  const config = PageMasterConfig.GetMasterConfig(spreadsheet)
+  if (!config || !spreadsheet) return;
+  PageSubmissions.Update(config, spreadsheet);
+}
+
+function UpdateAll() {
+  const spreadsheet = SpreadsheetApp.getActive();
+  const config = PageMasterConfig.GetMasterConfig(spreadsheet)
+  if (!config || !spreadsheet) return;
+  PageMasterConfig.UpdateAllPages(config, spreadsheet);
+}
+
+//#endregion
+
+/* -----------------------------------------------------------------------------
+  GRADING SHEETS
+------------------------------------------------------------------------------*/
+//#region Grading sheets
+
+function SetupStudentGradingSheet() {
+  PageStudentGrading.Setup(SpreadsheetApp.getActive());
+}
+
+function ClearStudentGradingSheet() {
+  const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(SpreadsheetApp.getActive());
+  if (!studentGradingSheet) return;
+
+  PageStudentGrading.ClearGrading(studentGradingSheet);
+}
+
+//#endregion
+
+
 /* -----------------------------------------------------------------------------
   UTILS
 ------------------------------------------------------------------------------*/
+//#region Utilities
 
 function SanitizeGithubURLs() {
   let range = SpreadsheetApp.getActiveSheet().getActiveRange();
@@ -176,6 +230,8 @@ function SanitizeGithubURLs() {
   }
   range.setValues(values);
 }
+
+//#endregion
 
 // -----------------------------------------------------------------------------
 // TODO: Internationalization, at least sv/en via Session.getActiveUserLocale?

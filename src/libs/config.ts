@@ -10,14 +10,7 @@ export namespace LibConfig {
     // -- GET VALUES
     let configValues = configRange.getValues();
 
-    // if (configValues[0].length < 2) {
-    //   Browser.msgBox("Selected range must be at least 2 columns wide");
-    //   return;
-    // }
-
     const config: Config = {
-      // gitFormat: "",
-      // driveFormat: "",
       pairs: []
     }
 
@@ -40,9 +33,31 @@ export namespace LibConfig {
   }
 
 
+  /**
+   * Split the pairs of a config into multiple configs based on their target sheet
+   * @param {LibConfig.Config} config - The config whose pairs to split
+   * @returns {Map<string, LibConfig.Config>} A map of configs, with target sheets as keys
+   */
+  export function ConfigSplitByTargetSheet(config: LibConfig.Config): Map<string, LibConfig.Config> {
+
+    const configs: Map<string, LibConfig.Config> = new Map();
+
+    config.pairs.forEach(pair => {
+      // Use target sheet as key for map; "_SUBMISSIONS" if empty
+      let key = pair.targetSheetName === "" ? "_SUBMISSIONS" : pair.targetSheetName;
+
+      // Key missing? Add it, with an empty config
+      if (!configs.has(key)) configs.set(key, { pairs: [] });
+
+      // Add this pair to the config at the key
+      configs.get(key)?.pairs.push(pair);
+    });
+
+    return configs;
+  }
+
+
   export interface Config {
-    // gitFormat?: string,
-    // driveFormat?: string,
     pairs:
     {
       courseID: string,
