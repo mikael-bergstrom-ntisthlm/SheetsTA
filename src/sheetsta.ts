@@ -8,6 +8,7 @@ import { PageMasterConfig } from "./pages/masterconfig";
 import { PageRoster } from "./pages/roster";
 import { PageSubmissions } from "./pages/submissions";
 import { PageStudentGrading } from "./pages/studentgrading";
+import { PageGradingOverview } from "./pages/gradingoverview";
 
 function Setup() {
   let ui = SpreadsheetApp.getUi();
@@ -40,8 +41,8 @@ function Setup() {
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Grading sheets")
         .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
-        //   // .addItem("Transfer to master grading sheet & clear", prefix + "Menu.TransferToMasterSheet")
-        //   // .addItem("Transfer from master grading sheet", prefix + "Menu.TransferFromMasterSheet")
+        .addItem("Transfer to grading overview & clear", `${prefix}TransferFromStudentGradingToOverview`)
+        .addItem("Transfer from master grading sheet", `${prefix}TransferFromOverviewToStudentGrading`)
         .addItem("Clear student grading sheet", `${prefix}ClearStudentGradingSheet`)
     )
     .addSubMenu(
@@ -210,6 +211,38 @@ function ClearStudentGradingSheet() {
   PageStudentGrading.ClearGrading(studentGradingSheet);
 }
 
+function TransferFromStudentGradingToOverview() {
+  const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
+  const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(spreadsheet);
+  const gradingOverviewSheet = PageGradingOverview.GetGradingOverviewSheet(spreadsheet);
+  if (!studentGradingSheet || !gradingOverviewSheet) return;
+
+  const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
+  if (userId === "") return;
+
+  PageStudentGrading.TransferToGradingOverviewSheet(
+    userId,
+    studentGradingSheet,
+    gradingOverviewSheet,
+    true);
+}
+
+function TransferFromOverviewToStudentGrading() {
+  const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
+  const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(spreadsheet);
+  const gradingOverviewSheet = PageGradingOverview.GetGradingOverviewSheet(spreadsheet);
+  if (!studentGradingSheet || !gradingOverviewSheet) return;
+
+  const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
+  if (userId === "") return;
+
+  PageStudentGrading.ImportFromGradingOverviewSheet(
+    userId,
+    studentGradingSheet,
+    gradingOverviewSheet
+  )
+}
+
 //#endregion
 
 
@@ -235,3 +268,4 @@ function SanitizeGithubURLs() {
 
 // -----------------------------------------------------------------------------
 // TODO: Internationalization, at least sv/en via Session.getActiveUserLocale?
+// TODO: Browser.msgbox instead of GetUI().alert

@@ -7,6 +7,9 @@ export namespace PageStudentGrading {
 
   const _StudentGradingSheetName = "STUDENTGRADE";
 
+  const _ColName: number = 2;
+  const _RowName: number = 1;
+
   const _ColRubric: number = 1;
   const _ColCriteria: number = 2;
   const _ColColnum: number = 3;
@@ -214,6 +217,167 @@ export namespace PageStudentGrading {
     return spreadsheet.getSheetByName(_StudentGradingSheetName);
   }
 
+  /**
+   * Get the ID of the currently selected user of a student grading sheet
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} studentGradingSheet - The sheet
+   * @returns {string} An ID
+   */
+  export function GetSelectedUserId(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): string {
+
+    const nameCellValue: string = studentGradingSheet.getRange(_RowName, _ColName).getValue();
+
+    if (nameCellValue == "") {
+      Browser.msgBox("No selection!");
+      return "";
+    }
+
+    let pair = nameCellValue.split("|");
+    if (pair.length != 2 || pair[1] === "") {
+      Browser.msgBox("Invalid selection!");
+      return "";
+    }
+
+    return pair[1].trim();
+  }
+
+  /* ---------------------------------------------------------------------------
+    TRANSFERRING DATA
+  ----------------------------------------------------------------------------*/
+  //#region Transferring
+
+  /**
+   * Imports a user's grades from an overview sheet to a student grading sheet
+   * @param userId - the ID of the user
+   * @param studentGradingSheet - the student grading sheet
+   * @param gradingOverviewSheet - the grading overview sheet
+   */
+  export function ImportFromGradingOverviewSheet(
+    userId: string,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
+  ) {
+
+    // -- PREP
+    const userOverviewData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
+    const gradingData = GetRubricsData(studentGradingSheet);
+
+    if (!userOverviewData) {
+      Browser.msgBox("User not found!");
+      return null;
+    }
+
+    if (!gradingData) return;
+
+    const userOverviewDataValues = userOverviewData.getValues();
+
+    // -- PROCESS
+    gradingData.values?.forEach((row, rowNum) => {
+
+      let sourceColumnNum = parseInt(row[_ColColnum - 1]);
+      if (isNaN(sourceColumnNum)) return;
+
+      gradingData.values[rowNum][_ColCheckmark - 1] =
+        userOverviewDataValues[0][sourceColumnNum]
+    });
+
+    // -- POST-PROCESS
+    gradingData.range.setValues(gradingData.values);
+  }
+
+  /**
+   * Exports a user's grades from a student grading sheet to an overview sheet
+   * @param userId - the ID of the user
+   * @param studentGradingSheet - the student grading sheet
+   * @param gradingOverviewSheet - the grading overview sheet
+   * @param clearAfterTransfer - whether to empty the student grading sheet after
+   */
+  export function TransferToGradingOverviewSheet(
+    userId: string,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    clearAfterTransfer: boolean
+  ) {
+
+    // -- PREP
+    const userOverviewData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
+    const gradingData = GetRubricsData(studentGradingSheet);
+
+    if (!userOverviewData) {
+      Browser.msgBox("User not found!");
+      return null;
+    }
+
+    if (!gradingData) return;
+
+    const userOverviewDataValues = userOverviewData.getValues();
+
+    // -- PROCESS
+    let overrideChecked: boolean = false;
+
+    // Go through all rows of grading data; making cancelled = true if any returns true
+    let cancelled = gradingData.values?.some((row, rowNum) => {
+
+      // Get the target column from the rubrics data
+      let targetColumnNum = parseInt(row[_ColColnum - 1]);
+      if (isNaN(targetColumnNum)) return;
+
+      // If there's already data in the cell & we haven't checked before; ask.
+      if (!(userOverviewDataValues[0][targetColumnNum].length == 0) && !overrideChecked) {
+        let answer = Browser.msgBox(
+          "Warning!",
+          "Grading data for student already exists.Overwrite ? ",
+          Browser.Buttons.YES_NO
+        );
+        if (answer === "no") return true;
+        overrideChecked = true;
+      }
+
+      // Transfer data point
+      userOverviewDataValues[0][targetColumnNum] = row[_ColCheckmark - 1];
+
+      // Reset?
+      if (clearAfterTransfer) {
+        if (row[_ColCheckmark - 1] === "✔" || row[_ColCheckmark - 1] === "✘") row[_ColCheckmark - 1] = ["✘"]
+        else row[_ColCheckmark - 1] = "";
+
+        gradingData.values[rowNum] = row;
+      }
+
+      return false;
+    });
+
+    // If we cancelled out, just return
+    if (cancelled) return;
+
+    // -- POST-PROCESS
+    userOverviewData.setValues(userOverviewDataValues);
+
+    if (clearAfterTransfer) {
+      gradingData.range.setValues(gradingData.values);
+      ClearSelectedUserId(studentGradingSheet);
+    }
+  }
+
+  /**
+   * Get the entire rubrics block (range+values) of a student grading sheet
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} studentGradingSheet - The student grading sheet
+   * @returns {RangeValuePair} A value-range pair
+   */
+  function GetRubricsData(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): RangeValuePair {
+
+    const gradingDataRange = studentGradingSheet
+      .getRange(_RowHeader + 1, 1, // Start at the row below the header
+        studentGradingSheet.getLastRow() - _RowHeader, // Get all the rows, minus the header
+        Math.max(_ColActive, _ColCheckmark, _ColColnum, _ColCriteria, _ColGrade, _ColRubric)); // Find the rightmost column
+
+    return {
+      values: gradingDataRange.getValues(),
+      range: gradingDataRange
+    };
+  }
+
+  //#endregion
+
   /* ---------------------------------------------------------------------------
     CLEARING & RESETTING
   ----------------------------------------------------------------------------*/
@@ -250,4 +414,9 @@ export namespace PageStudentGrading {
 
   //#endregion
 
+  // A pair consisting of a google sheets range and the values extracted from it (w/ the right dimension)
+  interface RangeValuePair {
+    range: GoogleAppsScript.Spreadsheet.Range,
+    values: any[][]
+  }
 }

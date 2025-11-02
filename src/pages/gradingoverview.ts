@@ -119,10 +119,7 @@ export namespace PageGradingOverview {
    * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - The spreadsheet containing the overview sheet
    * @returns {StudentData} the data of the student
    */
-  export function GetStudentData(userID: string, spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet): StudentData | null {
-
-    const gradingOverviewSheet = spreadsheet.getSheetByName(_GradingOverviewSheetName);
-    if (!gradingOverviewSheet) return null;
+  export function GetStudentData(userID: string, gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
 
     const studentsData = GetStudentsData(gradingOverviewSheet);
 
