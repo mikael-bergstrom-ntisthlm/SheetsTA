@@ -267,5 +267,15 @@ function SanitizeGithubURLs() {
 //#endregion
 
 // -----------------------------------------------------------------------------
-// TODO: Internationalization, at least sv/en via Session.getActiveUserLocale?
 // TODO: Browser.msgbox instead of GetUI().alert
+// TODO: RUBRICS master page
+// TODO: Setup grading overview page based on roster, rubrics & additional config(?)
+//         Extra columns
+// TODO: See single user's results (incl. rubric matrix)
+// TODO: Generate / Update individual student response sheets
+// TODO: Variation: gyarte-stuff?
+// TODO: Internationalization, at least sv/en via Session.getActiveUserLocale?
+
+
+// REFERENCES
+//  https://github.com/tomoyanakano/clasp-typescript-template

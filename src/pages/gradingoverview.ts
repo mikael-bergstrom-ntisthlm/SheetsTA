@@ -1,3 +1,4 @@
+import { LibConfig } from "../libs/config";
 import { LibRubrics } from "../libs/rubrics";
 
 export namespace PageGradingOverview {
@@ -21,8 +22,31 @@ export namespace PageGradingOverview {
 
   export function GetGradingOverviewSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
     GoogleAppsScript.Spreadsheet.Sheet | null {
-    
+
     return spreadsheet.getSheetByName(_GradingOverviewSheetName);
+  }
+
+  export function Setup(config: LibConfig.Config) {
+    // Config - by parameter
+
+    // Make header rows
+
+    // Get rubrics (from... file specified in config?)
+
+    // Topleft quadrant: roster headers
+    // Middle: configurable columns.
+    //   Example: [name:output, type=checkmarks]
+    //            [name:git, type=attachmentlink, source=Länkar, regex=github.com]
+    //            [name:presentation, type=none]
+    // Topright quadrant: rubric blocks
+    //   Calculate total width, get the whole thing in one swath
+    //   First fill in all data
+    //   Then do all the formatting, column widths etc
+    //     Is batching faster?
+
+    // Get roster
+    // Future: If roster already in place, update non-destructively (move student rows to accomodate new students)
+
   }
 
   /**
