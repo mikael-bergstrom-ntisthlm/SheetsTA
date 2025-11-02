@@ -31,7 +31,7 @@ export namespace PageStudentDetails {
 
 
     // 3 header rows: Student choice, blank, headings
-    const headerRange = targetSheet.getRange(1, 1, setup.RowHeader, 6); // TODO: Get rid of the 6
+    const headerRange = targetSheet.getRange(1, 1, setup.RowHeader, 6); // TODO: Get rid of the 6 (width)
     const headerValues = headerRange.getValues();
 
     // Setup student name cells (Always B1:D1)

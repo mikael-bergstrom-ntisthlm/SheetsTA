@@ -41,9 +41,10 @@ function Setup() {
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Grading sheets")
         .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
+        .addItem("Clear student grading sheet", `${prefix}ClearStudentGradingSheet`)
+        .addSeparator()
         .addItem("Transfer to grading overview & clear", `${prefix}TransferFromStudentGradingToOverview`)
         .addItem("Transfer from master grading sheet", `${prefix}TransferFromOverviewToStudentGrading`)
-        .addItem("Clear student grading sheet", `${prefix}ClearStudentGradingSheet`)
     )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Utilities")
@@ -122,7 +123,6 @@ function GetStudentSubmissions() {
 ------------------------------------------------------------------------------*/
 //#region Activity tracking
 
-// TODO: Move to its own Activity lib?
 function GetDocActivityWeeks() {
   LibGSheets.ProcessCurrentRange(row => GetDocActivity(row, "w"));
 }
@@ -267,12 +267,12 @@ function SanitizeGithubURLs() {
 //#endregion
 
 // -----------------------------------------------------------------------------
-// TODO: Browser.msgbox instead of GetUI().alert
 // TODO: RUBRICS master page
 // TODO: Setup grading overview page based on roster, rubrics & additional config(?)
 //         Extra columns
 // TODO: See single user's results (incl. rubric matrix)
 // TODO: Generate / Update individual student response sheets
+// TODO: Centralize logging, toasts & alerts
 // TODO: Variation: gyarte-stuff?
 // TODO: Internationalization, at least sv/en via Session.getActiveUserLocale?
 

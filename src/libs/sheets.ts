@@ -11,7 +11,6 @@ export namespace LibGSheets {
     sheetName: string,
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet, clear: boolean): GoogleAppsScript.Spreadsheet.Sheet {
 
-    // TODO: Centralize logging, toasts & alerts
     spreadsheet.toast("Working on " + sheetName);
 
     let sheet = spreadsheet.getSheetByName(sheetName);

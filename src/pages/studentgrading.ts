@@ -227,13 +227,13 @@ export namespace PageStudentGrading {
     const nameCellValue: string = studentGradingSheet.getRange(_RowName, _ColName).getValue();
 
     if (nameCellValue == "") {
-      Browser.msgBox("No selection!");
+      SpreadsheetApp.getUi().alert("No selection!");
       return "";
     }
 
     let pair = nameCellValue.split("|");
     if (pair.length != 2 || pair[1] === "") {
-      Browser.msgBox("Invalid selection!");
+      SpreadsheetApp.getUi().alert("Invalid selection!");
       return "";
     }
 
@@ -262,7 +262,7 @@ export namespace PageStudentGrading {
     const gradingData = GetRubricsData(studentGradingSheet);
 
     if (!userOverviewData) {
-      Browser.msgBox("User not found!");
+      SpreadsheetApp.getUi().alert("User not found!");
       return null;
     }
 
@@ -303,7 +303,7 @@ export namespace PageStudentGrading {
     const gradingData = GetRubricsData(studentGradingSheet);
 
     if (!userOverviewData) {
-      Browser.msgBox("User not found!");
+      SpreadsheetApp.getUi().alert("User not found!");
       return null;
     }
 
@@ -323,12 +323,14 @@ export namespace PageStudentGrading {
 
       // If there's already data in the cell & we haven't checked before; ask.
       if (!(userOverviewDataValues[0][targetColumnNum].length == 0) && !overrideChecked) {
-        let answer = Browser.msgBox(
+        const ui = SpreadsheetApp.getUi();
+        let response = ui.alert(
           "Warning!",
           "Grading data for student already exists.Overwrite ? ",
-          Browser.Buttons.YES_NO
+          ui.ButtonSet.YES_NO
         );
-        if (answer === "no") return true;
+        if (response === ui.Button.NO) return true;
+
         overrideChecked = true;
       }
 
@@ -391,7 +393,7 @@ export namespace PageStudentGrading {
     const checkmarkRange = studentGradingSheet.getRange(
       _RowHeader + 1,
       _ColCheckmark,
-      studentGradingSheet.getMaxRows() - _RowHeader + 1 // TODO: How to improve speed?
+      studentGradingSheet.getMaxRows() - _RowHeader + 1
     )
 
     const checkmarkValues = checkmarkRange.getValues().map(row => {

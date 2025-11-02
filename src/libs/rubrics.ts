@@ -1,7 +1,5 @@
 export namespace LibRubrics {
 
-  // TODO: Move to GradingOverviewSheet page file
-
   export function CountCriteria(rubrics: Rubric[]): number {
     return rubrics.reduce(
       (accumulator, rubric) => {
@@ -19,7 +17,7 @@ export namespace LibRubrics {
 
   interface Criteria {
     name: string;
-    shortform: string;
+    tag: string;
     active: boolean;
     grade: string;
     studentPassed?: boolean;

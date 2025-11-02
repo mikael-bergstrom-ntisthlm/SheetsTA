@@ -68,11 +68,11 @@ export namespace PageGradingOverview {
     if (!headerValues || headerValues?.length == 0) return [];
 
     // -- READ VALUES INTO DIFFERENT ROWS
-    let rubricTitleRow = headerValues[0]; // TODO: Extract magic numbers
-    let activeRow = headerValues[1]
-    let gradeRow = headerValues[2];
-    let shortformRow = headerValues[3]
-    let criteriaRow = headerValues[4];
+    let rubricTitleRow = headerValues[_RowRubricTitle - 1];
+    let activeRow = headerValues[_RowCriteriaActive - 1]
+    let gradeRow = headerValues[_RowGrade - 1];
+    let tagRow = headerValues[_RowTag - 1]
+    let criteriaRow = headerValues[_RowHeading - 1];
 
     let rubrics: LibRubrics.Rubric[] = [];
     let currentRubric: LibRubrics.Rubric | undefined = undefined;
@@ -94,7 +94,7 @@ export namespace PageGradingOverview {
         currentRubric.criteria.push(
           {
             name: criteriaRow[i],
-            shortform: shortformRow[i],
+            tag: tagRow[i],
             active: activeRow[i],
             grade: gradeRow[i],
             columnNumber: gradingOverviewSheet.getFrozenColumns() + i
