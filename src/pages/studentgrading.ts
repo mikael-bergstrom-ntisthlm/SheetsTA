@@ -299,7 +299,7 @@ export namespace PageStudentGrading {
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
     clearAfterTransfer: boolean
-  ) {
+  ): void {
 
     // -- PREP
     const overviewSheetData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
@@ -307,36 +307,20 @@ export namespace PageStudentGrading {
 
     if (!overviewSheetData) {
       SpreadsheetApp.getUi().alert("User not found!");
-      return null;
+      return;
     }
 
     if (!studentGradingData) return;
 
-
     // Reformat student grading data into array of criteria
-    let studentGradingCriterias: LibRubrics.Criteria[] = [];
-    let firstCriteriaColumn = Number.MAX_VALUE;
+    let studentGradingCriterias: LibRubrics.Criteria[] = GetCriteriaFromStudentGradingData(studentGradingData);
 
-    studentGradingData.values.forEach(row => {
-      let targetColumnNum = parseInt(row[_ColColnum - 1]);
-      if (isNaN(targetColumnNum)) return;
-
-      // Create and add criterium
-      let criterium: LibRubrics.Criteria = {
-        name: row[_ColName],
-        tag: "", // Not available in the student grading sheet
-        active: row[_ColActive],
-        grade: row[_ColCheckmark - 1],
-        columnNumber: row[_ColColnum - 1]
-      };
-
-      studentGradingCriterias.push(criterium);
-
-      // Check if this criterium's column number is lower
-      if (criterium.columnNumber < firstCriteriaColumn) {
-        firstCriteriaColumn = criterium.columnNumber;
-      }
-    });
+    // Find the lowest criterium column number
+    let firstCriteriaColumn = studentGradingCriterias.reduce((lowest, criteria) => {
+      return (lowest.columnNumber < criteria.columnNumber)
+        ? lowest
+        : criteria
+    }).columnNumber;
 
     // TODO: RangeValuePair, and those should probably be a class anyway, or something... #refactor
     const overviewSheetGradingData = overviewSheetData.offset(0, firstCriteriaColumn, 1, overviewSheetData.getWidth() - firstCriteriaColumn);
@@ -385,6 +369,32 @@ export namespace PageStudentGrading {
       studentGradingData.range.setValues(studentGradingData.values);
       ClearSelectedUserId(studentGradingSheet);
     }
+  }
+
+  /**
+   * Go through a set of student grading data and extract the criteria
+   * @param {RangeValuePair} studentGradingData 
+   * @returns An array of criteria
+   */
+  function GetCriteriaFromStudentGradingData(studentGradingData: RangeValuePair) {
+    let studentGradingCriterias: LibRubrics.Criteria[] = [];
+
+    studentGradingData.values.forEach(row => {
+      let targetColumnNum = parseInt(row[_ColColnum - 1]);
+      if (isNaN(targetColumnNum)) return;
+
+      // Create and add criterium
+      let criterium: LibRubrics.Criteria = {
+        name: row[_ColName],
+        tag: "", // Not available in the student grading sheet
+        active: row[_ColActive],
+        grade: row[_ColCheckmark - 1],
+        columnNumber: row[_ColColnum - 1]
+      };
+
+      studentGradingCriterias.push(criterium);
+    });
+    return studentGradingCriterias;
   }
 
   /**
