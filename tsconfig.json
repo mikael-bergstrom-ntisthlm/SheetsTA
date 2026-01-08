@@ -5,6 +5,7 @@
       "esnext"
     ],
     "allowJs": true,
+    "removeComments": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

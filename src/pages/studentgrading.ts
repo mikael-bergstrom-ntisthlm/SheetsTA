@@ -56,7 +56,10 @@ export namespace PageStudentGrading {
 
     const gradingOverviewSheet = PageGradingOverview.GetGradingOverviewSheet(spreadsheet);
 
-    if (!studentGradingSheet || !gradingOverviewSheet) return;
+    if (!studentGradingSheet || !gradingOverviewSheet) {
+      SpreadsheetApp.getUi().alert("Sheets not found");
+      return;
+    }
 
 
     // -- GET DATA
@@ -258,30 +261,30 @@ export namespace PageStudentGrading {
   ) {
 
     // -- PREP
-    const userOverviewData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
-    const gradingData = GetRubricsData(studentGradingSheet);
+    const OverviewSheetData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
+    const gradingSheetData = GetRubricsData(studentGradingSheet);
 
-    if (!userOverviewData) {
+    if (!OverviewSheetData) {
       SpreadsheetApp.getUi().alert("User not found!");
       return null;
     }
 
-    if (!gradingData) return;
+    if (!gradingSheetData) return;
 
-    const userOverviewDataValues = userOverviewData.getValues();
+    const userOverviewDataValues = OverviewSheetData.getValues();
 
     // -- PROCESS
-    gradingData.values?.forEach((row, rowNum) => {
+    gradingSheetData.values?.forEach((row, rowNum) => {
 
       let sourceColumnNum = parseInt(row[_ColColnum - 1]);
       if (isNaN(sourceColumnNum)) return;
 
-      gradingData.values[rowNum][_ColCheckmark - 1] =
+      gradingSheetData.values[rowNum][_ColCheckmark - 1] =
         userOverviewDataValues[0][sourceColumnNum]
     });
 
     // -- POST-PROCESS
-    gradingData.range.setValues(gradingData.values);
+    gradingSheetData.range.setValues(gradingSheetData.values);
   }
 
   /**
@@ -299,30 +302,57 @@ export namespace PageStudentGrading {
   ) {
 
     // -- PREP
-    const userOverviewData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
-    const gradingData = GetRubricsData(studentGradingSheet);
+    const overviewSheetData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
+    const studentGradingData = GetRubricsData(studentGradingSheet);
 
-    if (!userOverviewData) {
+    if (!overviewSheetData) {
       SpreadsheetApp.getUi().alert("User not found!");
       return null;
     }
 
-    if (!gradingData) return;
+    if (!studentGradingData) return;
 
-    const userOverviewDataValues = userOverviewData.getValues();
+
+    // Reformat student grading data into array of criteria
+    let studentGradingCriterias: LibRubrics.Criteria[] = [];
+    let firstCriteriaColumn = Number.MAX_VALUE;
+
+    studentGradingData.values.forEach(row => {
+      let targetColumnNum = parseInt(row[_ColColnum - 1]);
+      if (isNaN(targetColumnNum)) return;
+
+      // Create and add criterium
+      let criterium: LibRubrics.Criteria = {
+        name: row[_ColName],
+        tag: "", // Not available in the student grading sheet
+        active: row[_ColActive],
+        grade: row[_ColCheckmark - 1],
+        columnNumber: row[_ColColnum - 1]
+      };
+
+      studentGradingCriterias.push(criterium);
+
+      // Check if this criterium's column number is lower
+      if (criterium.columnNumber < firstCriteriaColumn) {
+        firstCriteriaColumn = criterium.columnNumber;
+      }
+    });
+
+    // TODO: RangeValuePair, and those should probably be a class anyway, or something... #refactor
+    const overviewSheetGradingData = overviewSheetData.offset(0, firstCriteriaColumn, 1, overviewSheetData.getWidth() - firstCriteriaColumn);
+    const overviewSheetGradingDataValues = overviewSheetGradingData.getValues();
 
     // -- PROCESS
     let overrideChecked: boolean = false;
 
     // Go through all rows of grading data; making cancelled = true if any returns true
-    let cancelled = gradingData.values?.some((row, rowNum) => {
+    let cancelled = studentGradingCriterias.some((criterium, rowNum) => {
 
       // Get the target column from the rubrics data
-      let targetColumnNum = parseInt(row[_ColColnum - 1]);
-      if (isNaN(targetColumnNum)) return;
+      let targetColumnNum = criterium.columnNumber - firstCriteriaColumn;
 
       // If there's already data in the cell & we haven't checked before; ask.
-      if (!(userOverviewDataValues[0][targetColumnNum].length == 0) && !overrideChecked) {
+      if (!(overviewSheetGradingDataValues[0][targetColumnNum].length == 0) && !overrideChecked) {
         const ui = SpreadsheetApp.getUi();
         let response = ui.alert(
           "Warning!",
@@ -335,27 +365,24 @@ export namespace PageStudentGrading {
       }
 
       // Transfer data point
-      userOverviewDataValues[0][targetColumnNum] = row[_ColCheckmark - 1];
-
-      // Reset?
-      if (clearAfterTransfer) {
-        if (row[_ColCheckmark - 1] === "✔" || row[_ColCheckmark - 1] === "✘") row[_ColCheckmark - 1] = ["✘"]
-        else row[_ColCheckmark - 1] = "";
-
-        gradingData.values[rowNum] = row;
-      }
+      overviewSheetGradingDataValues[0][targetColumnNum] = criterium.grade;
 
       return false;
     });
+
 
     // If we cancelled out, just return
     if (cancelled) return;
 
     // -- POST-PROCESS
-    userOverviewData.setValues(userOverviewDataValues);
+    overviewSheetGradingData.setValues(overviewSheetGradingDataValues);
 
     if (clearAfterTransfer) {
-      gradingData.range.setValues(gradingData.values);
+      studentGradingData.values.forEach((row, rownum) => {
+        row[_ColCheckmark - 1] = GetClearGradingFor(row[_ColCheckmark - 1])
+      })
+
+      studentGradingData.range.setValues(studentGradingData.values);
       ClearSelectedUserId(studentGradingSheet);
     }
   }
@@ -397,13 +424,19 @@ export namespace PageStudentGrading {
     )
 
     const checkmarkValues = checkmarkRange.getValues().map(row => {
-      if (row[0] === "✔" || row[0] === "✘") return ["✘"]
-      else return [""];
+      return [GetClearGradingFor(row[0])]
+      // if (row[0] === "✔" || row[0] === "✘") return ["✘"]
+      // else return [""];
     });
 
     checkmarkRange.setValues(checkmarkValues);
-
     ClearSelectedUserId(studentGradingSheet);
+  }
+
+  function GetClearGradingFor(currentValue: string) {
+    return (currentValue === "✔" || currentValue === "✘")
+      ? "✘"
+      : ""
   }
 
   /**

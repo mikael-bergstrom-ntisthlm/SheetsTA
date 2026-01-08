@@ -28,6 +28,11 @@ export default {
       extensions,
       mainFields: ["jsnext:main", "main"],
     }),
-    babel({extensions, babelHelpers: "runtime"})
+
+    // Babel transpiles into js
+    babel({
+      extensions, babelHelpers: "runtime",
+      comments: false
+    })
   ],
 };

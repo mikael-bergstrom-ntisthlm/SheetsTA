@@ -15,7 +15,7 @@ export namespace LibRubrics {
     columnNumber: number;
   }
 
-  interface Criteria {
+  export interface Criteria {
     name: string;
     tag: string;
     active: boolean;

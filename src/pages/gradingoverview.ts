@@ -11,7 +11,7 @@ export namespace PageGradingOverview {
   const _ColSurname = 4;
   const _ColEmail = 5;
   const _ColUserId = 6;
-  const _ColDataStart = 7;
+  const _ColDataStart = 7; // TODO: Should not be const! Can change when user adds columns!
 
   const _RowRubricTitle = 1;
   const _RowCriteriaActive = 2;
@@ -144,15 +144,15 @@ export namespace PageGradingOverview {
    * @returns {StudentData} the data of the student
    */
   export function GetStudentData(userID: string, gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
-
+    
     const studentsData = GetStudentsData(gradingOverviewSheet);
 
     let rowNum = studentsData.findIndex(student => student.id === userID);
     if (rowNum < 0) return null;
 
     const student = studentsData[rowNum];
+    // TODO: Should dataRange maybe only be the grades?
     student.dataRange = gradingOverviewSheet.getRange(_RowDataStart + rowNum, 1, 1, gradingOverviewSheet.getMaxColumns())
-
     return student;
   }
 
