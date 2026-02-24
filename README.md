@@ -3,12 +3,12 @@ This is a highly opinionated set of scripts and functions for Google Sheets, aim
 
 ## Installation
 * Create a google apps script project, possibly contained in a Sheets spreadsheet
-* Get [clasp](https://github.com/google/clasp). The instructions there use npm, I prefer yarn, do whatever you want.
-* Clasp clone app script project locally
-* If you want to write code yourself, I recommend [google apps script typings](https://yarnpkg.com/package?q=google-apps-script&name=%40types%2Fgoogle-apps-script).
-* git-clone this project (or your own fork of it) to the same directory, overwriting as necessary
-* Clasp push the scripts
-* Reload document
+  * Make note of the project's id
+* Download this project.
+* Create a .clasp.json.prod in the project's base folder.
+  * It should contain `{"scriptId":"your-id-here"}`
+* Run `yarn install` to get all typings and modules needed to build the project
+* Run `yarn run deploy:prod` to build & upload
 
 Maybe this process will be simplified or better explained later. Don't hold your breath.
 

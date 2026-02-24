@@ -1,4 +1,4 @@
 node_modules/**
-.clasp.json*
+.clasp.json.*
 .vscode/**
 build/**
