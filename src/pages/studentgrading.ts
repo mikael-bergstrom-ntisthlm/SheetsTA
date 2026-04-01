@@ -54,7 +54,7 @@ export namespace PageStudentGrading {
       spreadsheet, true
     )
 
-    const gradingOverviewSheet = PageGradingOverview.GetGradingOverviewSheet(spreadsheet);
+    const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
 
     if (!studentGradingSheet || !gradingOverviewSheet) {
       SpreadsheetApp.getUi().alert("Sheets not found");
@@ -280,7 +280,9 @@ export namespace PageStudentGrading {
       if (isNaN(sourceColumnNum)) return;
 
       gradingSheetData.values[rowNum][_ColCheckmark - 1] =
-        userOverviewDataValues[0][sourceColumnNum]
+        userOverviewDataValues[0][sourceColumnNum] != false ?
+          userOverviewDataValues[0][sourceColumnNum] :
+          "✘";
     });
 
     // -- POST-PROCESS

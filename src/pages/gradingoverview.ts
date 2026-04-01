@@ -1,5 +1,8 @@
+import { LibGClassroom } from "../libs/classroom";
 import { LibConfig } from "../libs/config";
 import { LibRubrics } from "../libs/rubrics";
+import { LibGSheets } from "../libs/sheets";
+import { PageRubrics } from "./rubrics";
 
 export namespace PageGradingOverview {
 
@@ -11,7 +14,8 @@ export namespace PageGradingOverview {
   const _ColSurname = 4;
   const _ColEmail = 5;
   const _ColUserId = 6;
-  const _ColDataStart = 7; // TODO: Should not be const! Can change when user adds columns!
+  const _ColFullName = 7;
+  const _ColOutput = 8;
 
   const _RowRubricTitle = 1;
   const _RowCriteriaActive = 2;
@@ -20,40 +24,201 @@ export namespace PageGradingOverview {
   const _RowHeading = 5;
   const _RowDataStart = 6;
 
-  export function GetGradingOverviewSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
+  export function GetDefaultGradingOverviewSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
     GoogleAppsScript.Spreadsheet.Sheet | null {
 
     return spreadsheet.getSheetByName(_GradingOverviewSheetName);
   }
 
-  export function Setup(config: LibConfig.Config) {
-    // Config - by parameter
+  export namespace Setup {
+    export function Setup(
+      spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
+      config: LibConfig.Config
+    ) {
 
-    // Make header rows
+      const gradingOverviewSheet = LibGSheets.CreateOrGetSheet(
+        // _GradingOverviewSheetName,
+        "OVERVIEW_BETA",
+        spreadsheet, true
+      )
 
-    // Get rubrics (from... file specified in config?)
+      const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
+      if (!rubricsSheet) return;
 
-    // Topleft quadrant: roster headers
-    // Middle: configurable columns.
-    //   Example: [name:output, type=checkmarks]
-    //            [name:git, type=attachmentlink, source=Länkar, regex=github.com]
-    //            [name:presentation, type=none]
-    // Topright quadrant: rubric blocks
-    //   Calculate total width, get the whole thing in one swath
-    //   First fill in all data
-    //   Then do all the formatting, column widths etc
-    //     Is batching faster?
+      // Get rubrics from _RUBRICS
+      let rubrics = PageRubrics.GetRubrics(rubricsSheet);
 
-    // Get roster
-    // Future: If roster already in place, update non-destructively (move student rows to accomodate new students)
+      // Initialize some values
+      let startColumn = gradingOverviewSheet.getLastColumn() + 1;
+      let allCriteria = rubrics.flatMap(rubric => rubric.criteria);
+      let highestCriteriaColId = Math.max(...allCriteria.map(criteria => criteria.columnNumber));
 
+      // Setup headers
+      SetupRosterHeader(gradingOverviewSheet);
+      SetupRubricHeader(gradingOverviewSheet, startColumn, highestCriteriaColId, rubrics);
+
+      // -- Set overall visuals
+      FormatHeader(gradingOverviewSheet, startColumn, highestCriteriaColId);
+
+      // Middle: configurable columns.
+      //   Example: [name:output, type=checkmarks]
+      //            [name:git, type=attachmentlink, source=Länkar, regex=github.com]
+      //            [name:presentation, type=none]
+
+
+      // Get roster
+      // Future: If roster already in place, update non-destructively (move student rows to accomodate new students)
+    }
+
+    export function UpdateActiveCriteriaFromTemplate(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
+      const gradingOverviewSheet = GetDefaultGradingOverviewSheet(spreadsheet);
+      const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
+      
+      if (!gradingOverviewSheet || !rubricsSheet) return;
+
+      let rubrics = PageRubrics.GetRubrics(rubricsSheet);
+
+      let startColumn = gradingOverviewSheet.getFrozenColumns();
+      let allCriteria = rubrics.flatMap(rubric => rubric.criteria);
+      let highestCriteriaColId = Math.max(...allCriteria.map(criteria => criteria.columnNumber));
+
+      // Get the range we need
+      let rubricHeaderRange = gradingOverviewSheet.getRange(
+        _RowCriteriaActive, startColumn,
+        1, startColumn + highestCriteriaColId
+      );
+      let rubricHeaderRangeValues = rubricHeaderRange.getValues();
+
+      allCriteria.forEach(criteria => {
+        rubricHeaderRangeValues[0][criteria.columnNumber] = criteria.active;
+      });
+
+      rubricHeaderRange.setValues(rubricHeaderRangeValues);
+    }
+
+    export function UpdateActiveCriteriaToTemplate() {
+
+    }
+
+    function SetupRosterHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+
+      // Prepare headers
+      let rosterHeaders = LibGClassroom.rosterHeaders;
+      rosterHeaders.push("Full name");
+      rosterHeaders.push("Output");
+
+      // Freeze rows & columns to create quadrants
+      gradingOverviewSheet.setFrozenColumns(rosterHeaders.length);
+      gradingOverviewSheet.setFrozenRows(_RowDataStart - 1);
+
+      // Setup roster headings (top-left quadrant)
+      let headerRange = gradingOverviewSheet.getRange(_RowTag, 1, 2, rosterHeaders.length);
+      let headerRangeValues = headerRange.getValues();
+
+      // TODO: Use the consts for col-numbers
+      headerRangeValues[0] = rosterHeaders.map(
+        v => LibRubrics.GetSafeTagName(v)
+      );
+      headerRangeValues[1] = rosterHeaders;
+
+      headerRange.setValues(headerRangeValues);
+
+      gradingOverviewSheet.setColumnWidth(_ColName, 150);
+      gradingOverviewSheet.setColumnWidth(_ColSurname, 150);
+      gradingOverviewSheet.setColumnWidth(_ColClassroomID, 150);
+      gradingOverviewSheet.setColumnWidth(_ColFullName, 150);
+      gradingOverviewSheet.setColumnWidth(_ColOutput, 50);
+
+      gradingOverviewSheet.hideColumns(_ColUserId);
+      gradingOverviewSheet.hideColumns(_ColCourseID);
+      gradingOverviewSheet.hideColumns(_ColEmail);
+    }
+
+    function SetupRubricHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, highestCriteriaColId: number, rubrics: LibRubrics.Rubric[]) {
+      // Get the range we need
+      let rubricHeaderRange = gradingOverviewSheet.getRange(
+        1, startColumn,
+        5, startColumn + highestCriteriaColId
+      );
+      let rubricHeaderRangeValues = rubricHeaderRange.getValues();
+
+      // Go through the rubrics
+      rubrics.forEach(rubric => {
+        // Set rubric heading
+        rubricHeaderRangeValues[_RowRubricTitle - 1][rubric.columnNumber - 1]
+          = rubric.name;
+
+        // Insert criteria info
+        rubric.criteria.forEach(criteria => {
+          rubricHeaderRangeValues[_RowHeading - 1][criteria.columnNumber - 1]
+            = criteria.name;
+          rubricHeaderRangeValues[_RowTag - 1][criteria.columnNumber - 1]
+            = criteria.tag;
+          rubricHeaderRangeValues[_RowGrade - 1][criteria.columnNumber - 1]
+            = criteria.grade;
+          rubricHeaderRangeValues[_RowCriteriaActive - 1][criteria.columnNumber - 1]
+            = criteria.active;
+        });
+
+        let lastColumnOfRubric = Math.max(...rubric.criteria.map(criteria => criteria.columnNumber));
+
+        // -- Setup Grade column for rubric
+        rubricHeaderRangeValues[_RowTag - 1][lastColumnOfRubric]
+          = LibRubrics.GetSafeTagName(rubric.name) + "grade";
+        rubricHeaderRangeValues[_RowHeading - 1][lastColumnOfRubric]
+          = "Grade";
+        rubricHeaderRangeValues[_RowCriteriaActive - 1][lastColumnOfRubric]
+          = true;
+
+        FormatRubricSingleHeader(gradingOverviewSheet, startColumn, rubric);
+      });
+
+      rubricHeaderRange.setValues(rubricHeaderRangeValues);
+    }
+
+    function FormatRubricSingleHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, rubric: LibRubrics.Rubric) {
+      // -- Rubric titles visuals
+      let rubricTitleRange = gradingOverviewSheet.getRange(
+        _RowRubricTitle, startColumn + rubric.columnNumber - 1,
+        1, rubric.criteria.length + 1);
+      rubricTitleRange.merge();
+      rubricTitleRange.setFontWeight("bold");
+
+      // -- Criteria active checkboxes
+      let criteriaCheckboxRange = gradingOverviewSheet.getRange(
+        _RowCriteriaActive, startColumn + rubric.columnNumber - 1,
+        1, rubric.criteria.length + 1);
+      criteriaCheckboxRange.insertCheckboxes();
+
+      // -- Column widths
+      gradingOverviewSheet.setColumnWidths(
+        startColumn + rubric.columnNumber, rubric.criteria.length, 100
+      );
+      gradingOverviewSheet.setColumnWidth(
+        startColumn + rubric.columnNumber + rubric.criteria.length, 20
+      );
+    }
+
+    function FormatHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, highestCriteriaColId: number) {
+      let headingRange = gradingOverviewSheet.getRange(
+        _RowHeading, 1, 1,
+        startColumn + highestCriteriaColId);
+      let tagRange = gradingOverviewSheet.getRange(
+        _RowTag, 1, 1,
+        startColumn + highestCriteriaColId);
+
+      headingRange.setFontWeight("bold");
+      headingRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+      tagRange.setFontSize(8);
+      tagRange.setFontStyle("italic");
+    }
   }
 
   /**
    * Get the rubrics from the overview sheet
    * @param spreadsheet 
    * @returns {Rubric[]} an array of rubrics
-   */
+  */
   export function GetRubrics(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): LibRubrics.Rubric[] {
 
     // -- HEADER BLOCK VALUES RETRIEVAL
@@ -116,7 +281,7 @@ export namespace PageGradingOverview {
     const studentValues = gradingOverviewSheet.getRange(
       _RowDataStart, 1,
       gradingOverviewSheet.getLastRow() - _RowDataStart + 1,
-      _ColDataStart
+      gradingOverviewSheet.getFrozenColumns()
     ).getValues()
 
     const studentsData: StudentData[] = [];
@@ -144,7 +309,7 @@ export namespace PageGradingOverview {
    * @returns {StudentData} the data of the student
    */
   export function GetStudentData(userID: string, gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
-    
+
     const studentsData = GetStudentsData(gradingOverviewSheet);
 
     let rowNum = studentsData.findIndex(student => student.id === userID);

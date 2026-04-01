@@ -40,6 +40,9 @@ function Setup() {
     )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Grading sheets")
+        .addItem("Setup grading overview sheet", `${prefix}SetupGradingOverviewSheet`)
+        .addItem("Update active criteria in overview sheet", `${prefix}UpdateGradingOverviewActiveFromTemplate`)
+        .addSeparator()
         .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
         .addItem("Clear student grading sheet", `${prefix}ClearStudentGradingSheet`)
         .addSeparator()
@@ -200,6 +203,19 @@ function UpdateAll() {
 ------------------------------------------------------------------------------*/
 //#region Grading sheets
 
+function SetupGradingOverviewSheet() {
+  const spreadsheet = SpreadsheetApp.getActive();
+  const config = PageMasterConfig.GetMasterConfig(spreadsheet)
+  if (!config || !spreadsheet) return;
+
+  PageGradingOverview.Setup.Setup(spreadsheet, config);
+}
+
+function UpdateGradingOverviewActiveFromTemplate() {
+  const spreadsheet = SpreadsheetApp.getActive();
+  PageGradingOverview.Setup.UpdateActiveCriteriaFromTemplate(spreadsheet)
+}
+
 function SetupStudentGradingSheet() {
   PageStudentGrading.Setup(SpreadsheetApp.getActive());
 }
@@ -214,7 +230,7 @@ function ClearStudentGradingSheet() {
 function TransferFromStudentGradingToOverview() {
   const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
   const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(spreadsheet);
-  const gradingOverviewSheet = PageGradingOverview.GetGradingOverviewSheet(spreadsheet);
+  const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
   if (!studentGradingSheet || !gradingOverviewSheet) return;
 
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
@@ -230,7 +246,7 @@ function TransferFromStudentGradingToOverview() {
 function TransferFromOverviewToStudentGrading() {
   const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
   const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(spreadsheet);
-  const gradingOverviewSheet = PageGradingOverview.GetGradingOverviewSheet(spreadsheet);
+  const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
   if (!studentGradingSheet || !gradingOverviewSheet) return;
 
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);

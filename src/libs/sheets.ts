@@ -25,7 +25,7 @@ export namespace LibGSheets {
     return sheet;
   }
 
-  
+
   /**
    * Adjust the size of a sheet
    * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - the sheet to resize

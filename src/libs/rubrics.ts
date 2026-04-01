@@ -1,5 +1,11 @@
 export namespace LibRubrics {
 
+  export function GetSafeTagName(name: string) {
+    return name.toLocaleLowerCase()
+        .trim()
+        .replace(/[^\w]/g, '')
+  }
+
   export function CountCriteria(rubrics: Rubric[]): number {
     return rubrics.reduce(
       (accumulator, rubric) => {

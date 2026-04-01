@@ -5,6 +5,8 @@ import { LibGithub } from "./github";
 
 export namespace LibGClassroom {
 
+  export const rosterHeaders:string[] = ["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"];
+
   /**
    * Creates a list of active classrooms the current user has access to
    * @returns {string[][]} A two-dimensional array; an array of rows containing classroom data. First row is headers. Each row (inner array) will contain) columns: Course name, CourseID
@@ -44,14 +46,14 @@ export namespace LibGClassroom {
     return classroomValues;
   }
 
-
+  // TODO: refactor so instead it gives Student objects?
   /**
    * Creates a roster of students by combining student lists from 1+ Google Classrooms
    * @param {Config} config - The config object to use; will contain info on what classrooms to get rosters from
    * @returns {string[][]} A two-dimensional array; an array of rows containing student data. First row is headers. Each row (inner array) will contain) columns: Classroom (name), Course ID, Name, Surname, Email, UserID.
    */
   export function GetRoster(config: LibConfig.Config): string[][] {
-    let rosterValues: string[][] = [["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"]];
+    let rosterValues: string[][] = [rosterHeaders];
 
     // -- PROCESS CONFIG PAIRS
     config.pairs.forEach(pair => {
