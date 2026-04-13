@@ -1,4 +1,4 @@
-import { PageGradingOverview } from "./gradingoverview";
+import { PageGradingOverview } from "./gradingoverview.js";
 
 export namespace PageStudentDetails {
 

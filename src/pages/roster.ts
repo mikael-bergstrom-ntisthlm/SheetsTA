@@ -1,6 +1,6 @@
-import { LibGClassroom } from "../libs/classroom";
-import { LibConfig } from "../libs/config";
-import { LibGSheets } from "../libs/sheets";
+import { LibGClassroom } from "../libs/classroom.js";
+import { LibConfig } from "../libs/config.js";
+import { LibGSheets } from "../libs/sheets.js";
 
 export namespace PageRoster {
 

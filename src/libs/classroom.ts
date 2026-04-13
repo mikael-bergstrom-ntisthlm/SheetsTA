@@ -1,7 +1,5 @@
-
-import { LibConfig } from "./config";
-import { LibGithub } from "./github";
-
+import { LibConfig } from "./config.js";
+import { LibGithub } from "./github.js";
 
 export namespace LibGClassroom {
 
@@ -18,7 +16,7 @@ export namespace LibGClassroom {
     do {
 
       // -- GET CLASSROOMS
-      const classrooms = Classroom.Courses?.list(
+      const classrooms = Classroom?.Courses?.list(
         {
           courseStates: ["ACTIVE"],
           pageToken: nextPageToken,
@@ -63,7 +61,7 @@ export namespace LibGClassroom {
       // "1" means second column, where CourseID is stored
       if (rosterValues.some(row => row[1] === pair.courseID)) return; // Skip if course's roster is already processed
 
-      const classroomName = Classroom.Courses?.get(pair.courseID).name ?? "unnamed classroom";
+      const classroomName = Classroom?.Courses?.get(pair.courseID).name ?? "unnamed classroom";
 
       let nextPageToken: string = "";
 
@@ -72,7 +70,7 @@ export namespace LibGClassroom {
       do { // For each page of results
 
         // -- GET ROSTER
-        const roster = Classroom.Courses?.Students?.list(pair.courseID,
+        const roster = Classroom?.Courses?.Students?.list(pair.courseID,
           { pageToken: nextPageToken }
         );
 
@@ -120,7 +118,7 @@ export namespace LibGClassroom {
     config.pairs.forEach(pair => {
 
       // -- GET ASSIGNMENTS
-      const assignments = Classroom.Courses?.CourseWork?.list(pair.courseID);
+      const assignments = Classroom?.Courses?.CourseWork?.list(pair.courseID);
       if (assignments?.courseWork == undefined) {
         SpreadsheetApp.getUi().alert("No assignments found");
         return;
@@ -158,7 +156,7 @@ export namespace LibGClassroom {
 
       do {
         // -- GET SUBMISSIONS
-        const submissions = Classroom.Courses?.CourseWork?.StudentSubmissions?.list(pair.courseID, pair.courseworkID,
+        const submissions = Classroom?.Courses?.CourseWork?.StudentSubmissions?.list(pair.courseID, pair.courseworkID,
           { pageToken: nextPageToken }
         );
 
@@ -224,7 +222,7 @@ export namespace LibGClassroom {
       || attachment.driveFile.id == undefined
     ) return "";
 
-    const file = Drive.Files?.get(attachment.driveFile.id);
+    const file = Drive?.Files?.get(attachment.driveFile.id);
     if (!file?.mimeType) return "";
 
     return file.mimeType

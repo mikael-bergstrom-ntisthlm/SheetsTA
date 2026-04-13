@@ -1,14 +1,16 @@
-import { LibGClassroom } from "./libs/classroom";
-import { LibConfig } from "./libs/config";
-import { LibGSheets } from "./libs/sheets";
-import { LibGDocs } from "./libs/docs";
-import { LibUtils } from "./libs/utils";
-import { LibGithub } from "./libs/github";
-import { PageMasterConfig } from "./pages/masterconfig";
-import { PageRoster } from "./pages/roster";
-import { PageSubmissions } from "./pages/submissions";
-import { PageStudentGrading } from "./pages/studentgrading";
-import { PageGradingOverview } from "./pages/gradingoverview";
+/// <reference types="google-apps-script" />
+
+import { LibGClassroom } from "./libs/classroom.js";
+import { LibConfig } from "./libs/config.js";
+import { LibGSheets } from "./libs/sheets.js";
+import { LibGDocs } from "./libs/docs.js";
+import { LibUtils } from "./libs/utils.js";
+import { LibGithub } from "./libs/github.js";
+import { PageMasterConfig } from "./pages/masterconfig.js";
+import { PageRoster } from "./pages/roster.js";
+import { PageSubmissions } from "./pages/submissions.js";
+import { PageStudentGrading } from "./pages/studentgrading.js";
+import { PageGradingOverview } from "./pages/gradingoverview.js";
 
 function Setup() {
   let ui = SpreadsheetApp.getUi();
@@ -48,6 +50,9 @@ function Setup() {
         .addSeparator()
         .addItem("Transfer to grading overview & clear", `${prefix}TransferFromStudentGradingToOverview`)
         .addItem("Transfer from master grading sheet", `${prefix}TransferFromOverviewToStudentGrading`)
+    ).addSubMenu(
+      SpreadsheetApp.getUi().createMenu("Grading responses")
+        .addItem("Generate/Update response for student", `${prefix}GenerateResponseDocForStudent`)
     )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Utilities")
@@ -209,6 +214,7 @@ function SetupGradingOverviewSheet() {
   if (!config || !spreadsheet) return;
 
   PageGradingOverview.Setup.Setup(spreadsheet, config);
+  // TODO: test this
 }
 
 function UpdateGradingOverviewActiveFromTemplate() {
@@ -221,7 +227,7 @@ function SetupStudentGradingSheet() {
 }
 
 function ClearStudentGradingSheet() {
-  const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(SpreadsheetApp.getActive());
+  const studentGradingSheet = PageStudentGrading.GetDefaultStudentGradingSheet(SpreadsheetApp.getActive());
   if (!studentGradingSheet) return;
 
   PageStudentGrading.ClearGrading(studentGradingSheet);
@@ -229,7 +235,7 @@ function ClearStudentGradingSheet() {
 
 function TransferFromStudentGradingToOverview() {
   const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-  const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(spreadsheet);
+  const studentGradingSheet = PageStudentGrading.GetDefaultStudentGradingSheet(spreadsheet);
   const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
   if (!studentGradingSheet || !gradingOverviewSheet) return;
 
@@ -245,22 +251,35 @@ function TransferFromStudentGradingToOverview() {
 
 function TransferFromOverviewToStudentGrading() {
   const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-  const studentGradingSheet = PageStudentGrading.GetStudentGradingSheet(spreadsheet);
+  const studentGradingSheet = PageStudentGrading.GetDefaultStudentGradingSheet(spreadsheet);
   const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
   if (!studentGradingSheet || !gradingOverviewSheet) return;
 
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
   if (userId === "") return;
 
-  PageStudentGrading.ImportFromGradingOverviewSheet(
-    userId,
-    studentGradingSheet,
-    gradingOverviewSheet
-  )
+  // PageStudentGrading.ImportFromGradingOverviewSheet(
+  //   userId,
+  //   studentGradingSheet,
+  //   gradingOverviewSheet
+  // )
 }
 
 //#endregion
 
+/* -----------------------------------------------------------------------------
+  RESPONSE DOCS
+------------------------------------------------------------------------------*/
+//#region Response docs
+
+function GenerateResponseDocForStudent() {
+  const spreadsheet = SpreadsheetApp.getActive();
+
+  const config = PageMasterConfig.GetMasterConfig(spreadsheet);
+
+
+}
+//#endregion
 
 /* -----------------------------------------------------------------------------
   UTILS

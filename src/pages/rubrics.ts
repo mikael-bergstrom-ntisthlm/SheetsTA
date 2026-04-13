@@ -1,4 +1,4 @@
-import { LibRubrics } from "../libs/rubrics";
+import { LibRubrics } from "../libs/rubrics.js";
 
 
 // This page should act as SSOT for rubrics

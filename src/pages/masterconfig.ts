@@ -1,7 +1,7 @@
-import { LibGSheets } from "../libs/sheets";
-import { LibConfig } from "../libs/config";
-import { PageRoster } from "./roster";
-import { PageSubmissions } from "./submissions";
+import { LibGSheets } from "../libs/sheets.js";
+import { LibConfig } from "../libs/config.js";
+import { PageRoster } from "./roster.js";
+import { PageSubmissions } from "./submissions.js";
 
 
 export namespace PageMasterConfig {

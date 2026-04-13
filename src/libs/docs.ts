@@ -13,7 +13,7 @@ export namespace LibGDocs {
     const document = DocumentApp.openByUrl(docUrl);
 
     // -- GET EDITS
-    let result = DriveActivity.Activity?.query({
+    let result = DriveActivity?.Activity?.query({
       "ancestorName": "items/" + document.getId(),
       "filter": "detail.action_detail_case:EDIT"
     });

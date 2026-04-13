@@ -1,12 +1,12 @@
-import { LibGClassroom } from "../libs/classroom";
-import { LibConfig } from "../libs/config";
-import { LibRubrics } from "../libs/rubrics";
-import { LibGSheets } from "../libs/sheets";
-import { PageRubrics } from "./rubrics";
+import { LibGClassroom } from "../libs/classroom.js";
+import { LibConfig } from "../libs/config.js";
+import { LibRubrics } from "../libs/rubrics.js";
+import { LibGSheets } from "../libs/sheets.js";
+import { PageRubrics } from "./rubrics.js";
 
 export namespace PageGradingOverview {
 
-  const _GradingOverviewSheetName = "OVERVIEW";
+  const _GradingOverviewSheetName = "OVERVIEW_BETA";
 
   const _ColClassroomID = 1;
   const _ColCourseID = 2;
@@ -37,10 +37,10 @@ export namespace PageGradingOverview {
     ) {
 
       const gradingOverviewSheet = LibGSheets.CreateOrGetSheet(
-        // _GradingOverviewSheetName,
-        "OVERVIEW_BETA",
+        _GradingOverviewSheetName,
         spreadsheet, true
-      )
+      );
+      LibGSheets.ClearSheet(gradingOverviewSheet);
 
       const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
       if (!rubricsSheet) return;
@@ -49,31 +49,42 @@ export namespace PageGradingOverview {
       let rubrics = PageRubrics.GetRubrics(rubricsSheet);
 
       // Initialize some values
-      let startColumn = gradingOverviewSheet.getLastColumn() + 1;
       let allCriteria = rubrics.flatMap(rubric => rubric.criteria);
       let highestCriteriaColId = Math.max(...allCriteria.map(criteria => criteria.columnNumber));
 
+      let totalWidth = LibGClassroom.rosterHeaders.length + 2
+        + allCriteria.length
+        + rubrics.length * 2
+        + 2; // margin
+      LibGSheets.SetSheetWidth(gradingOverviewSheet, totalWidth);
+
       // Setup headers
       SetupRosterHeader(gradingOverviewSheet);
+      let startColumn = gradingOverviewSheet.getLastColumn() + 1;
       SetupRubricHeader(gradingOverviewSheet, startColumn, highestCriteriaColId, rubrics);
+
+      // Setup data areas
+      SetupRosterArea(gradingOverviewSheet);
 
       // -- Set overall visuals
       FormatHeader(gradingOverviewSheet, startColumn, highestCriteriaColId);
+    }
 
-      // Middle: configurable columns.
-      //   Example: [name:output, type=checkmarks]
-      //            [name:git, type=attachmentlink, source=Länkar, regex=github.com]
-      //            [name:presentation, type=none]
+    function SetupRosterArea(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+      let fullNameRange = gradingOverviewSheet.getRange(
+        _RowDataStart, _ColFullName,
+        gradingOverviewSheet.getMaxRows() - _RowDataStart
+      );
 
+      fullNameRange.setFormula(`=${String.fromCharCode(64 + _ColSurname)}${_RowDataStart} & " " & ${String.fromCharCode(64 + _ColName)}${_RowDataStart}`);
 
-      // Get roster
-      // Future: If roster already in place, update non-destructively (move student rows to accomodate new students)
+      fullNameRange.setBackground("#d9d9d9");
     }
 
     export function UpdateActiveCriteriaFromTemplate(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
       const gradingOverviewSheet = GetDefaultGradingOverviewSheet(spreadsheet);
       const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
-      
+
       if (!gradingOverviewSheet || !rubricsSheet) return;
 
       let rubrics = PageRubrics.GetRubrics(rubricsSheet);
@@ -89,9 +100,11 @@ export namespace PageGradingOverview {
       );
       let rubricHeaderRangeValues = rubricHeaderRange.getValues();
 
+
       allCriteria.forEach(criteria => {
         rubricHeaderRangeValues[0][criteria.columnNumber] = criteria.active;
       });
+
 
       rubricHeaderRange.setValues(rubricHeaderRangeValues);
     }
@@ -169,7 +182,6 @@ export namespace PageGradingOverview {
           = "Grade";
         rubricHeaderRangeValues[_RowCriteriaActive - 1][lastColumnOfRubric]
           = true;
-
         FormatRubricSingleHeader(gradingOverviewSheet, startColumn, rubric);
       });
 
@@ -317,8 +329,36 @@ export namespace PageGradingOverview {
 
     const student = studentsData[rowNum];
     // TODO: Should dataRange maybe only be the grades?
-    student.dataRange = gradingOverviewSheet.getRange(_RowDataStart + rowNum, 1, 1, gradingOverviewSheet.getMaxColumns())
+    student.dataRange = gradingOverviewSheet.getRange(_RowDataStart + rowNum, 1, 1, gradingOverviewSheet.getMaxColumns());
     return student;
+  }
+
+
+  export function GetStudentDataRubrics(userID: string,
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
+
+    const studentsData = GetStudentsData(gradingOverviewSheet);
+
+    let rowNum = studentsData.findIndex(student => student.id === userID);
+    if (rowNum < 0) return null;
+
+    const student = studentsData[rowNum];
+    student.dataRange = gradingOverviewSheet.getRange(_RowDataStart + rowNum, 1, 1, gradingOverviewSheet.getMaxColumns());
+
+
+
+    return student;
+  }
+
+  function GetFirstRubricColumn(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+
+    let rubricTitlesRange = gradingOverviewSheet.getRange(
+      _RowRubricTitle,
+      gradingOverviewSheet.getFrozenColumns() + 1,
+      1,
+      gradingOverviewSheet.getMaxColumns() - gradingOverviewSheet.getFrozenColumns()
+    );
+    rubricTitlesRange.setBackgroundRGB(0, 0, 255);
   }
 
 
@@ -327,6 +367,7 @@ export namespace PageGradingOverview {
     name: string,
     surname: string,
     email: string,
-    dataRange?: GoogleAppsScript.Spreadsheet.Range
+    dataRange?: GoogleAppsScript.Spreadsheet.Range,
+    rubricData?: LibRubrics.Rubric[]
   }
 }

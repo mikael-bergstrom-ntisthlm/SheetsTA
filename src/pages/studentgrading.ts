@@ -1,7 +1,7 @@
-import { LibRubrics } from "../libs/rubrics";
-import { LibGSheets } from "../libs/sheets"
-import { PageGradingOverview } from "./gradingoverview";
-import { PageStudentDetails } from "./studentdetails";
+import { LibRubrics } from "../libs/rubrics.js";
+import { LibGSheets } from "../libs/sheets.js"
+import { PageGradingOverview } from "./gradingoverview.js";
+import { PageStudentDetails } from "./studentdetails.js";
 
 export namespace PageStudentGrading {
 
@@ -214,7 +214,7 @@ export namespace PageStudentGrading {
   }
 
 
-  export function GetStudentGradingSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
+  export function GetDefaultStudentGradingSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
     GoogleAppsScript.Spreadsheet.Sheet | null {
 
     return spreadsheet.getSheetByName(_StudentGradingSheetName);

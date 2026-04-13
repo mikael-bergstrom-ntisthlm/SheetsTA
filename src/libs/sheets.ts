@@ -51,6 +51,15 @@ export namespace LibGSheets {
     }
 
     // -- WIDTH
+    SetSheetWidth(sheet, targetWidth);
+  }
+
+  // TODO: Document this
+  export function SetSheetWidth(
+    sheet: GoogleAppsScript.Spreadsheet.Sheet,
+    targetWidth: number,
+  ) {
+    const currentWidth = sheet.getMaxColumns();
     if (currentWidth < targetWidth) {
       AddEmptyColumns(sheet, targetWidth - currentWidth);
     } else if (currentWidth > targetWidth) {
@@ -120,6 +129,7 @@ export namespace LibGSheets {
     sheet.setFrozenRows(0);
     sheet.setFrozenColumns(0);
     sheet.showColumns(1, width);
+    sheet.setColumnWidths(1, sheet.getMaxColumns(), 100);
 
     sheet.getRange(1, 1,
       height,
