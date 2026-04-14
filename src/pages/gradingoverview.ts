@@ -6,7 +6,7 @@ import { PageRubrics } from "./rubrics.js";
 
 export namespace PageGradingOverview {
 
-  const _GradingOverviewSheetName = "OVERVIEW_BETA";
+  const _GradingOverviewSheetName = "OVERVIEW";
 
   const _ColClassroomID = 1;
   const _ColCourseID = 2;
@@ -151,7 +151,7 @@ export namespace PageGradingOverview {
       // Get the range we need
       let rubricHeaderRange = gradingOverviewSheet.getRange(
         1, startColumn,
-        5, startColumn + highestCriteriaColId
+        5, highestCriteriaColId + 3 // + for extra cols after rubrics (for results export)
       );
       let rubricHeaderRangeValues = rubricHeaderRange.getValues();
 
@@ -185,6 +185,10 @@ export namespace PageGradingOverview {
         FormatRubricSingleHeader(gradingOverviewSheet, startColumn, rubric);
       });
 
+      // Response doc header
+      rubricHeaderRangeValues[_RowHeading - 1][rubricHeaderRangeValues[_RowHeading - 1].length - 1] = "RESPONSE";
+      rubricHeaderRangeValues[_RowTag - 1][rubricHeaderRangeValues[_RowTag - 1].length - 1] = "responsedoc";
+
       rubricHeaderRange.setValues(rubricHeaderRangeValues);
     }
 
@@ -212,12 +216,13 @@ export namespace PageGradingOverview {
     }
 
     function FormatHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, highestCriteriaColId: number) {
+      let lastCol = gradingOverviewSheet.getLastColumn();
       let headingRange = gradingOverviewSheet.getRange(
         _RowHeading, 1, 1,
-        startColumn + highestCriteriaColId);
+        lastCol);
       let tagRange = gradingOverviewSheet.getRange(
         _RowTag, 1, 1,
-        startColumn + highestCriteriaColId);
+        lastCol);
 
       headingRange.setFontWeight("bold");
       headingRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
