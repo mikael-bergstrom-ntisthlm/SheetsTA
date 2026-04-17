@@ -110,7 +110,7 @@ export namespace PageGradingOverview {
     }
 
     export function UpdateActiveCriteriaToTemplate() {
-
+      // TODO: Implement
     }
 
     function SetupRosterHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
@@ -325,21 +325,7 @@ export namespace PageGradingOverview {
    * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - The spreadsheet containing the overview sheet
    * @returns {StudentData} the data of the student
    */
-  export function GetStudentData(userID: string, gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
-
-    const studentsData = GetStudentsData(gradingOverviewSheet);
-
-    let rowNum = studentsData.findIndex(student => student.id === userID);
-    if (rowNum < 0) return null;
-
-    const student = studentsData[rowNum];
-    // TODO: Should dataRange maybe only be the grades?
-    student.dataRange = gradingOverviewSheet.getRange(_RowDataStart + rowNum, 1, 1, gradingOverviewSheet.getMaxColumns());
-    return student;
-  }
-
-
-  export function GetStudentDataRubrics(userID: string,
+  export function GetStudentData(userID: string,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
 
     const studentsData = GetStudentsData(gradingOverviewSheet);
@@ -349,24 +335,60 @@ export namespace PageGradingOverview {
 
     const student = studentsData[rowNum];
     student.dataRange = gradingOverviewSheet.getRange(_RowDataStart + rowNum, 1, 1, gradingOverviewSheet.getMaxColumns());
-
-
-
     return student;
   }
 
-  function GetFirstRubricColumn(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
-    let rubricTitlesRange = gradingOverviewSheet.getRange(
-      _RowRubricTitle,
-      gradingOverviewSheet.getFrozenColumns() + 1,
-      1,
-      gradingOverviewSheet.getMaxColumns() - gradingOverviewSheet.getFrozenColumns()
-    );
-    rubricTitlesRange.setBackgroundRGB(0, 0, 255);
+  export function GetStudentDataRubrics(userID: string,
+    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
+
+    // TODO: Make this more precise
+    const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
+
+    // Find the right student
+    const studentsData = GetStudentsData(gradingOverviewSheet);
+
+    let studentRowNum = studentsData.findIndex(student => student.id === userID);
+    if (studentRowNum < 0) { Browser.msgBox("Student ID not found"); return null; };
+
+    const student = studentsData[studentRowNum];
+
+    // Get the student's data
+    const studentDataValues = gradingOverviewSheet.getRange(
+      _RowDataStart + studentRowNum, // Student's row
+      colDataStart,
+      1, // only one row
+      gradingOverviewSheet.getMaxColumns() - colDataStart
+    ).getValues();
+
+    // Get the rubrics from the rubrics sheet
+    student.rubricData = PageRubrics.GetRubrics(rubricsSheet);
+
+    // Get the tags-row from the overview sheet
+    const tagsValues = gradingOverviewSheet.getRange(
+      _RowTag, colDataStart,
+      1, gradingOverviewSheet.getMaxColumns() - colDataStart
+    ).getValues();
+
+    // Go through the rubrics
+    student.rubricData.forEach(rubric => {
+      rubric.criteria.forEach(criteria => {
+
+        // Check if the tags match
+        if (criteria.tag == tagsValues[0][criteria.columnNumber - 1]) {
+          criteria.studentPassed =
+            studentDataValues[0][criteria.columnNumber - 1] == "✔";
+          
+        } else {
+          Browser.msgBox(`MISMATCH:\\n${criteria.tag} != ${tagsValues[0][criteria.columnNumber - 1]}`);
+        }
+      });
+    });
+
+    return student;
   }
-
-
+  
   export interface StudentData {
     id: string,
     name: string,

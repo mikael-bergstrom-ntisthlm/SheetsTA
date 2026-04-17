@@ -11,6 +11,7 @@ import { PageRoster } from "./pages/roster.js";
 import { PageSubmissions } from "./pages/submissions.js";
 import { PageStudentGrading } from "./pages/studentgrading.js";
 import { PageGradingOverview } from "./pages/gradingoverview.js";
+import { PageRubrics } from "./pages/rubrics.js";
 
 function Setup() {
   let ui = SpreadsheetApp.getUi();
@@ -41,10 +42,12 @@ function Setup() {
         .addItem("Update all", `${prefix}UpdateAll`)
     )
     .addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Grading sheets")
+      SpreadsheetApp.getUi().createMenu("Overview sheet")
         .addItem("Setup grading overview sheet", `${prefix}SetupGradingOverviewSheet`)
         .addItem("Update active criteria in overview sheet", `${prefix}UpdateGradingOverviewActiveFromTemplate`)
-        .addSeparator()
+    )
+    .addSubMenu(
+      SpreadsheetApp.getUi().createMenu("Grading sheets")
         .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
         .addItem("Clear student grading sheet", `${prefix}ClearStudentGradingSheet`)
         .addSeparator()
@@ -214,7 +217,6 @@ function SetupGradingOverviewSheet() {
   if (!config || !spreadsheet) return;
 
   PageGradingOverview.Setup.Setup(spreadsheet, config);
-  // TODO: test this
 }
 
 function UpdateGradingOverviewActiveFromTemplate() {
@@ -253,10 +255,19 @@ function TransferFromOverviewToStudentGrading() {
   const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
   const studentGradingSheet = PageStudentGrading.GetDefaultStudentGradingSheet(spreadsheet);
   const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
-  if (!studentGradingSheet || !gradingOverviewSheet) return;
-
+  const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
+  if (!studentGradingSheet || !gradingOverviewSheet || !rubricsSheet) return;
+  
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
   if (userId === "") return;
+  
+  // TODO: Make data handover "cleaner"
+
+  let student = PageGradingOverview.GetStudentDataRubrics(
+    userId,
+    rubricsSheet,
+    gradingOverviewSheet
+  );
 
   // PageStudentGrading.ImportFromGradingOverviewSheet(
   //   userId,
