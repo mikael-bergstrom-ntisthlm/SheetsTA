@@ -6,6 +6,7 @@ export namespace PageStudentDetails {
     ColRubric: number;
     ColCriteria: number;
     ColColnum: number;
+    ColTag: number;
     ColCheckmark: number;
     ColGrade: number;
     ColActive: number;
@@ -31,7 +32,7 @@ export namespace PageStudentDetails {
 
 
     // 3 header rows: Student choice, blank, headings
-    const headerRange = targetSheet.getRange(1, 1, setup.RowHeader, 6); // TODO: Get rid of the 6 (width)
+    const headerRange = targetSheet.getRange(1, 1, setup.RowHeader, GetHighestColumnNumber(setup));
     const headerValues = headerRange.getValues();
 
     // Setup student name cells (Always B1:D1)
@@ -46,16 +47,32 @@ export namespace PageStudentDetails {
     headerValues[setup.RowHeader - 1][setup.ColRubric - 1] = "Rubric";
     headerValues[setup.RowHeader - 1][setup.ColCriteria - 1] = "Criteria";
     headerValues[setup.RowHeader - 1][setup.ColColnum - 1] = "Column number";
+    headerValues[setup.RowHeader - 1][setup.ColTag - 1] = "Tag";
+
     if (setup.IncludeCheckboxCol) {
       headerValues[setup.RowHeader - 1][setup.ColCheckmark - 1] = "✔/✘";
       targetSheet.getRange(setup.RowHeader, setup.ColCheckmark).setHorizontalAlignment("center");
     }
+
     if (setup.IncludeGradeCol)
       headerValues[setup.RowHeader - 1][setup.ColGrade - 1] = "Grade";
+
     headerValues[setup.RowHeader - 1][setup.ColActive - 1] = "Active";
 
     headerRange.setValues(headerValues);
     targetSheet.setFrozenRows(setup.RowHeader);
+  }
+
+  function GetHighestColumnNumber(setup:SheetSetup) {
+    return Math.max(
+      setup.ColActive,
+      setup.ColCheckmark,
+      setup.ColColnum,
+      setup.ColCriteria,
+      setup.ColGrade,
+      setup.ColRubric,
+      setup.ColTag
+    );
   }
 
 }

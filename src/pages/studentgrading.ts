@@ -1,6 +1,7 @@
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js"
 import { PageGradingOverview } from "./gradingoverview.js";
+import { PageRubrics } from "./rubrics.js";
 import { PageStudentDetails } from "./studentdetails.js";
 
 export namespace PageStudentGrading {
@@ -13,9 +14,10 @@ export namespace PageStudentGrading {
   const _ColRubric: number = 1;
   const _ColCriteria: number = 2;
   const _ColColnum: number = 3;
-  const _ColCheckmark: number = 4;
-  const _ColGrade: number = 5;
-  const _ColActive: number = 6;
+  const _ColTag: number = 4;
+  const _ColCheckmark: number = 5;
+  const _ColGrade: number = 6;
+  const _ColActive: number = 7;
 
   const _RowHeader: number = 3;
   const _EditBoxColor: number[] = [217, 234, 211];
@@ -29,15 +31,17 @@ export namespace PageStudentGrading {
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet
   ) {
 
+    // TODO: Decide wtf to do here – global config or config object?
     // -- CONFIG
     const setup: PageStudentDetails.SheetSetup = {
-      ColRubric: 1,
-      ColCriteria: 2,
-      ColColnum: 3,
-      ColCheckmark: 4,
-      ColGrade: 5,
-      ColActive: 6,
-      RowHeader: 3,
+      ColRubric: _ColRubric,
+      ColCriteria: _ColCriteria,
+      ColColnum: _ColColnum,
+      ColTag: _ColTag,
+      ColCheckmark: _ColCheckmark,
+      ColGrade: _ColGrade,
+      ColActive: _ColActive,
+      RowHeader: _RowHeader,
 
       IncludeCheckboxCol: true,
       IncludeGradeCol: false,
@@ -55,26 +59,28 @@ export namespace PageStudentGrading {
     )
 
     const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
+    const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
 
-    if (!studentGradingSheet || !gradingOverviewSheet) {
-      SpreadsheetApp.getUi().alert("Sheets not found");
+    if (!studentGradingSheet || !gradingOverviewSheet || !rubricsSheet) {
+      SpreadsheetApp.getUi().alert("At least one sheet not found (student grading, overview, rubrics)");
       return;
     }
 
 
     // -- GET DATA
-    const rubrics = PageGradingOverview.GetRubrics(gradingOverviewSheet);
+    
+    const rubrics = PageRubrics.GetRubrics(rubricsSheet);
     const students = PageGradingOverview.GetStudentsData(gradingOverviewSheet);
 
     // -- CLEAR & SET SIZE
     LibGSheets.ClearSheet(studentGradingSheet);
 
-    const totalHeight = _RowHeader
+    const totalHeight = setup.RowHeader
       + LibRubrics.CountCriteria(rubrics)
       + rubrics.length * 2 // Space for grade + spacing
       + 3; // Space for comment block
 
-    LibGSheets.SetSheetSize(studentGradingSheet, 8, totalHeight);
+    LibGSheets.SetSheetSize(studentGradingSheet, 8, totalHeight); //TODO: Get rid of the hardcoded 8 plz
 
     // -- SETUP BLOCKS
 
@@ -88,6 +94,9 @@ export namespace PageStudentGrading {
       .setColumnWidth(_ColGrade, 70)
       .setColumnWidth(_ColActive, 70)
       .hideColumns(_ColColnum);
+    studentGradingSheet
+      .hideColumns(_ColTag);
+    
   }
 
   namespace SetupHelpers {
@@ -101,10 +110,11 @@ export namespace PageStudentGrading {
       studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
       rubrics: LibRubrics.Rubric[]
     ) {
+      //TODO: Is the plan to move this too to studentdetails?
 
       let rubricStartRow = _RowHeader + 1;
 
-      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows() - _RowHeader, 6);
+      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows() - _RowHeader, 7); // TODO: Get rid of this hardcoded 7
       const dataValues = dataRange.getValues();
 
       // -- RUBRICS ROWS
@@ -119,6 +129,7 @@ export namespace PageStudentGrading {
         rubric.criteria.forEach(criteria => {
           dataValues[row][_ColCriteria - 1] = criteria.name;
           dataValues[row][_ColColnum - 1] = criteria.columnNumber;
+          dataValues[row][_ColTag - 1] = criteria.tag;
           dataValues[row][_ColCheckmark - 1] = "✘";
           dataValues[row][_ColGrade - 1] = criteria.grade;
           dataValues[row][_ColActive - 1] = criteria.active;

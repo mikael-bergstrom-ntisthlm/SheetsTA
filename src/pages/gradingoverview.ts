@@ -320,7 +320,7 @@ export namespace PageGradingOverview {
 
 
   /**
-   * Get the details of a single user from the overview sheet
+   * Get the details of a single user from the overview sheet, including data Range
    * @param {string} userID - The user to get the details of
    * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - The spreadsheet containing the overview sheet
    * @returns {StudentData} the data of the student
@@ -339,6 +339,13 @@ export namespace PageGradingOverview {
   }
 
 
+  /**
+   * Get the details of a single user from the overview sheet, including rubrics
+   * @param userID 
+   * @param rubricsSheet 
+   * @param gradingOverviewSheet 
+   * @returns 
+   */
   export function GetStudentDataRubrics(userID: string,
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
@@ -388,7 +395,7 @@ export namespace PageGradingOverview {
 
     return student;
   }
-  
+
   export interface StudentData {
     id: string,
     name: string,
