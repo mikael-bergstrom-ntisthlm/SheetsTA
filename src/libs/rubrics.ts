@@ -17,6 +17,7 @@ export namespace LibRubrics {
   export interface Rubric {
     name: string;
     studentGrade?: string;
+    gradeTag: string;
     criteria: Criteria[];
     columnNumber: number;
   }

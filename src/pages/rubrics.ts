@@ -33,6 +33,7 @@ export namespace PageRubrics {
           name: rubricDataRow[_ColRubricTitle - 1],
           criteria: [],
           columnNumber: currentColNumber,
+          gradeTag: LibRubrics.GetSafeTagName(rubricDataRow[_ColRubricTitle - 1])
         }
         rubrics.push(currentRubric);
       }

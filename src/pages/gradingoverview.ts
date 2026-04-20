@@ -177,7 +177,7 @@ export namespace PageGradingOverview {
 
         // -- Setup Grade column for rubric
         rubricHeaderRangeValues[_RowTag - 1][lastColumnOfRubric]
-          = LibRubrics.GetSafeTagName(rubric.name) + "grade";
+          = rubric.gradeTag;
         rubricHeaderRangeValues[_RowHeading - 1][lastColumnOfRubric]
           = "Grade";
         rubricHeaderRangeValues[_RowCriteriaActive - 1][lastColumnOfRubric]
@@ -266,7 +266,8 @@ export namespace PageGradingOverview {
         currentRubric = {
           criteria: [],
           columnNumber: gradingOverviewSheet.getFrozenColumns() + i,
-          name: rubricTitleRow[i]
+          name: rubricTitleRow[i],
+          gradeTag: LibRubrics.GetSafeTagName(rubricTitleRow[i]) + "grade"
         }
         rubrics.push(currentRubric);
       }
@@ -339,6 +340,10 @@ export namespace PageGradingOverview {
   }
 
 
+  export function InsertRubricData(userID: any, rubrics: LibRubrics.Rubric[]) {
+    throw new Error("Function not implemented.");
+  }
+
   /**
    * Get the details of a single user from the overview sheet, including rubrics
    * @param userID 
@@ -380,17 +385,29 @@ export namespace PageGradingOverview {
 
     // Go through the rubrics
     student.rubricData.forEach(rubric => {
-      rubric.criteria.forEach(criteria => {
+      rubric.criteria.forEach(criterion => {
 
+        // TODO: remove reliance on columnNumber; just find matching tag
         // Check if the tags match
-        if (criteria.tag == tagsValues[0][criteria.columnNumber - 1]) {
-          criteria.studentPassed =
-            studentDataValues[0][criteria.columnNumber - 1] == "✔";
-          
+        if (criterion.tag == tagsValues[0][criterion.columnNumber - 1]) {
+          criterion.studentPassed =
+            studentDataValues[0][criterion.columnNumber - 1] == "✔";
+
         } else {
-          Browser.msgBox(`MISMATCH:\\n${criteria.tag} != ${tagsValues[0][criteria.columnNumber - 1]}`);
+          Browser.msgBox(`MISMATCH:\\n${criterion.tag} != ${tagsValues[0][criterion.columnNumber - 1]}`);
         }
       });
+
+      // Find column of rubric's overall grade
+      const gradeCol = rubric.criteria.reduce(
+        (prev, current) => {
+          return prev.columnNumber > current.columnNumber ? prev : current
+        }
+      ).columnNumber;
+
+      // Save rubric grade
+      rubric.studentGrade = studentDataValues[0][gradeCol];
+
     });
 
     return student;

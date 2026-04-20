@@ -68,7 +68,7 @@ export namespace PageStudentGrading {
 
 
     // -- GET DATA
-    
+
     const rubrics = PageRubrics.GetRubrics(rubricsSheet);
     const students = PageGradingOverview.GetStudentsData(gradingOverviewSheet);
 
@@ -96,7 +96,7 @@ export namespace PageStudentGrading {
       .hideColumns(_ColColnum);
     studentGradingSheet
       .hideColumns(_ColTag);
-    
+
   }
 
   namespace SetupHelpers {
@@ -138,6 +138,7 @@ export namespace PageStudentGrading {
 
         // "Grade" on its own row
         dataValues[row][_ColCriteria - 1] = "Grade";
+        dataValues[row][_ColTag - 1] = rubric.gradeTag;
         dataValues[row][_ColColnum - 1] = rubric.criteria.slice(-1)[0].columnNumber + 1;
         dataValues[row][_ColActive - 1] = true;
 
@@ -259,45 +260,98 @@ export namespace PageStudentGrading {
   ----------------------------------------------------------------------------*/
   //#region Transferring
 
-  /**
-   * Imports a user's grades from an overview sheet to a student grading sheet
-   * @param userId - the ID of the user
-   * @param studentGradingSheet - the student grading sheet
-   * @param gradingOverviewSheet - the grading overview sheet
-   */
-  export function ImportFromGradingOverviewSheet(
-    userId: string,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
+
+  export function InsertStudentDataRubrics(
+    student: PageGradingOverview.StudentData,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
 
-    // -- PREP
-    const OverviewSheetData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
-    const gradingSheetData = GetRubricsData(studentGradingSheet);
-
-    if (!OverviewSheetData) {
-      SpreadsheetApp.getUi().alert("User not found!");
-      return null;
+    if (!student.rubricData) {
+      Browser.msgBox("Student has no data!");
+      return;
     }
 
-    if (!gradingSheetData) return;
+    const localData = GetRubricsData(studentGradingSheet);
 
-    const userOverviewDataValues = OverviewSheetData.getValues();
+    // Setup quick index of tags and row numbers for easy lookup
+    const tagRowNumbers = new Map<string, number>();
 
-    // -- PROCESS
-    gradingSheetData.values?.forEach((row, rowNum) => {
-
-      let sourceColumnNum = parseInt(row[_ColColnum - 1]);
-      if (isNaN(sourceColumnNum)) return;
-
-      gradingSheetData.values[rowNum][_ColCheckmark - 1] =
-        userOverviewDataValues[0][sourceColumnNum] != false ?
-          userOverviewDataValues[0][sourceColumnNum] :
-          "✘";
+    localData.values.forEach((row, rowNum) => {
+      tagRowNumbers.set("" + row[_ColTag - 1], rowNum);
     });
 
-    // -- POST-PROCESS
-    gradingSheetData.range.setValues(gradingSheetData.values);
+    // Go through the rubrics, get grades from local data
+    student.rubricData?.forEach(rubric => {
+      rubric.criteria.forEach(criterion => {
+
+        // Find the row with the corresponding tag
+        const rowNum = tagRowNumbers.get(criterion.tag);
+        if (rowNum === undefined) {
+          Browser.msgBox(`No row found for criterion '${criterion.name}'`);
+          return;
+        }
+
+        // Set the row's checkmark status
+        localData.values[rowNum][_ColCheckmark - 1] =
+          criterion.studentPassed ? "✔" : "✘";
+      });
+
+      // Set the grade
+      const rowNum = tagRowNumbers.get(rubric.gradeTag);
+      if (rowNum === undefined) return;
+      localData.values[rowNum][_ColCheckmark - 1] = rubric.studentGrade;
+    });
+
+    // Insert the data
+    localData.range.setValues(
+      localData.values
+    )
+  }
+
+  // TODO: CURRENT PROJECT
+  export function GetStudentDataRubrics(
+    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ): LibRubrics.Rubric[] {
+
+    // Get rubrics from rubrics page
+    const rubrics = PageRubrics.GetRubrics(rubricsSheet);
+    if (rubrics.length == 0) { Browser.msgBox("No rubrics found") }
+
+    // Get the local values
+    const localData = GetRubricsData(studentGradingSheet);
+
+    // Setup quick index of tags and row numbers for easy lookup
+    const tagRowNumbers = new Map<string, number>();
+
+    localData.values.forEach((row, rowNum) => {
+      tagRowNumbers.set("" + row[_ColTag - 1], rowNum);
+    });
+
+    // Go through the rubrics, set grades from local data
+    rubrics.forEach(rubric => {
+      rubric.criteria.forEach(criterion => {
+
+        // Find the row with the corresponding tag
+        const rowNum = tagRowNumbers.get(criterion.tag);
+        if (rowNum === undefined) {
+          Browser.msgBox(`No row found for criterion '${criterion.name}'`);
+          return
+        };
+
+        // Set passed/not passed
+        criterion.studentPassed =
+          localData.values[rowNum][_ColCheckmark - 1] == "✔" ? true : false;
+      });
+
+      // Set the grade
+      const rowNum = tagRowNumbers.get(rubric.gradeTag);
+      if (rowNum === undefined) return;
+      rubric.studentGrade = localData.values[rowNum][_ColCheckmark - 1];
+    });
+
+    // Return the rubrics
+    return rubrics;
   }
 
   /**

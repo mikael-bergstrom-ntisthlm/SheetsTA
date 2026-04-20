@@ -239,16 +239,24 @@ function TransferFromStudentGradingToOverview() {
   const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
   const studentGradingSheet = PageStudentGrading.GetDefaultStudentGradingSheet(spreadsheet);
   const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
-  if (!studentGradingSheet || !gradingOverviewSheet) return;
+  const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
+  if (!studentGradingSheet || !gradingOverviewSheet || !rubricsSheet) return;
 
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
   if (userId === "") return;
 
-  PageStudentGrading.TransferToGradingOverviewSheet(
-    userId,
-    studentGradingSheet,
-    gradingOverviewSheet,
-    true);
+  const rubrics = PageStudentGrading.GetStudentDataRubrics(
+    rubricsSheet,
+    studentGradingSheet
+  )
+
+  // PageGradingOverview.InsertRubricData(userId, rubrics);
+
+  // PageStudentGrading.TransferToGradingOverviewSheet(
+  //   userId,
+  //   studentGradingSheet,
+  //   gradingOverviewSheet,
+  //   true);
 }
 
 function TransferFromOverviewToStudentGrading() {
@@ -257,23 +265,18 @@ function TransferFromOverviewToStudentGrading() {
   const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
   const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
   if (!studentGradingSheet || !gradingOverviewSheet || !rubricsSheet) return;
-  
+
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
   if (userId === "") return;
-  
-  // TODO: Make data handover "cleaner"
 
   let student = PageGradingOverview.GetStudentDataRubrics(
     userId,
     rubricsSheet,
     gradingOverviewSheet
   );
+  if (!student) return;
 
-  // PageStudentGrading.ImportFromGradingOverviewSheet(
-  //   userId,
-  //   studentGradingSheet,
-  //   gradingOverviewSheet
-  // )
+  PageStudentGrading.InsertStudentDataRubrics(student, studentGradingSheet)
 }
 
 //#endregion
@@ -313,7 +316,6 @@ function SanitizeGithubURLs() {
 //#endregion
 
 // -----------------------------------------------------------------------------
-// TODO: RUBRICS master page
 // TODO: Setup grading overview page based on roster, rubrics & additional config(?)
 //         Extra columns
 // TODO: See single user's results (incl. rubric matrix)
