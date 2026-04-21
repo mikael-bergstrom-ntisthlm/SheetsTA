@@ -22,84 +22,82 @@ export namespace PageStudentGrading {
   const _RowHeader: number = 3;
   const _EditBoxColor: number[] = [217, 234, 211];
 
-  /**
-   * Add a student grading sheet to a spreadsheet, based on its grading overview data (students, rubrics)
-   * @param spreadsheet The spreadsheet to add the student grading sheet to
-   * @returns 
-   */
-  export function Setup(
-    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet
-  ) {
+  export namespace Setup {
+    /**
+     * Add a student grading sheet to a spreadsheet, based on its grading overview data (students, rubrics)
+     * @param spreadsheet The spreadsheet to add the student grading sheet to
+     * @returns 
+     */
+    export function Setup(
+      spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet
+    ) {
 
-    // TODO: Decide wtf to do here – global config or config object?
-    // -- CONFIG
-    const setup: PageStudentDetails.SheetSetup = {
-      ColRubric: _ColRubric,
-      ColCriteria: _ColCriteria,
-      ColColnum: _ColColnum,
-      ColTag: _ColTag,
-      ColCheckmark: _ColCheckmark,
-      ColGrade: _ColGrade,
-      ColActive: _ColActive,
-      RowHeader: _RowHeader,
+      // TODO: Decide wtf to do here – global config or config object?
+      // -- CONFIG
+      const setup: PageStudentDetails.SheetSetup = {
+        ColRubric: _ColRubric,
+        ColCriteria: _ColCriteria,
+        ColColnum: _ColColnum,
+        ColTag: _ColTag,
+        ColCheckmark: _ColCheckmark,
+        ColGrade: _ColGrade,
+        ColActive: _ColActive,
+        RowHeader: _RowHeader,
 
-      IncludeCheckboxCol: true,
-      IncludeGradeCol: false,
-      IncludeGradeLine: true,
-      IncludeCommentLine: true,
+        IncludeCheckboxCol: true,
+        IncludeGradeCol: false,
+        IncludeGradeLine: true,
+        IncludeCommentLine: true,
 
-      CheckboxColType: "checkable",
-      CheckboxColColorized: true,
+        CheckboxColType: "checkable",
+        CheckboxColColorized: true,
+      }
+
+      // -- PREP
+      const studentGradingSheet = LibGSheets.CreateOrGetSheet(
+        _StudentGradingSheetName,
+        spreadsheet, true
+      )
+
+      const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
+      const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
+
+      if (!studentGradingSheet || !gradingOverviewSheet || !rubricsSheet) {
+        SpreadsheetApp.getUi().alert("At least one sheet not found (student grading, overview, rubrics)");
+        return;
+      }
+
+      // -- GET DATA
+
+      const rubrics = PageRubrics.GetRubrics(rubricsSheet);
+      const students = PageGradingOverview.GetStudentsData(gradingOverviewSheet);
+
+      // -- CLEAR & SET SIZE
+      LibGSheets.ClearSheet(studentGradingSheet);
+
+      const totalHeight = setup.RowHeader
+        + LibRubrics.CountCriteria(rubrics)
+        + rubrics.length * 2 // Space for grade + spacing
+        + 3; // Space for comment block
+
+      LibGSheets.SetSheetSize(studentGradingSheet, 8, totalHeight); //TODO: Get rid of the hardcoded 8 plz
+
+      // -- SETUP BLOCKS
+
+      PageStudentDetails.SetupHeaderBlock(studentGradingSheet, students, setup);
+      SetupRubricsBlock(studentGradingSheet, rubrics);
+
+      // -- SET WIDTHS
+      studentGradingSheet
+        .setColumnWidth(_ColRubric, 223)
+        .setColumnWidth(_ColCriteria, 275)
+        .setColumnWidth(_ColGrade, 70)
+        .setColumnWidth(_ColActive, 70)
+        .hideColumns(_ColColnum);
+      studentGradingSheet
+        .hideColumns(_ColTag);
+
     }
-
-    // -- PREP
-    const studentGradingSheet = LibGSheets.CreateOrGetSheet(
-      _StudentGradingSheetName,
-      spreadsheet, true
-    )
-
-    const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
-    const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
-
-    if (!studentGradingSheet || !gradingOverviewSheet || !rubricsSheet) {
-      SpreadsheetApp.getUi().alert("At least one sheet not found (student grading, overview, rubrics)");
-      return;
-    }
-
-
-    // -- GET DATA
-
-    const rubrics = PageRubrics.GetRubrics(rubricsSheet);
-    const students = PageGradingOverview.GetStudentsData(gradingOverviewSheet);
-
-    // -- CLEAR & SET SIZE
-    LibGSheets.ClearSheet(studentGradingSheet);
-
-    const totalHeight = setup.RowHeader
-      + LibRubrics.CountCriteria(rubrics)
-      + rubrics.length * 2 // Space for grade + spacing
-      + 3; // Space for comment block
-
-    LibGSheets.SetSheetSize(studentGradingSheet, 8, totalHeight); //TODO: Get rid of the hardcoded 8 plz
-
-    // -- SETUP BLOCKS
-
-    PageStudentDetails.SetupHeaderBlock(studentGradingSheet, students, setup);
-    SetupHelpers.SetupRubricsBlock(studentGradingSheet, rubrics);
-
-    // -- SET WIDTHS
-    studentGradingSheet
-      .setColumnWidth(_ColRubric, 223)
-      .setColumnWidth(_ColCriteria, 275)
-      .setColumnWidth(_ColGrade, 70)
-      .setColumnWidth(_ColActive, 70)
-      .hideColumns(_ColColnum);
-    studentGradingSheet
-      .hideColumns(_ColTag);
-
-  }
-
-  namespace SetupHelpers {
 
     /**
      * Add a block of rubrics & criteria
@@ -150,6 +148,7 @@ export namespace PageStudentGrading {
 
       // -- COMMENT ROW
       dataValues[row + 1][_ColCriteria - 1] = "Comment";
+      dataValues[row + 1][_ColTag - 1] = "comment";
 
       // Offset is 3 because last criteria's colnr + last grade colnr + 2.
       const commentColNr = 3 + (rubrics.at(-1)?.criteria.at(-1)?.columnNumber ?? 0);
@@ -158,7 +157,8 @@ export namespace PageStudentGrading {
       dataRange.offset(row + 1, _ColCriteria - 1, 1, 1)
         .setHorizontalAlignment("right")
         .setFontWeight("bold")
-        .offset(0, 2, 1, 3) // get writing box
+        .offset(0, 3, 1, 3) // get writing box
+          // TODO: Four magic numbers; not ideal
         .setBackgroundRGB(_EditBoxColor[0], _EditBoxColor[1], _EditBoxColor[2])
         .merge();
 
@@ -225,7 +225,6 @@ export namespace PageStudentGrading {
     }
   }
 
-
   export function GetDefaultStudentGradingSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
     GoogleAppsScript.Spreadsheet.Sheet | null {
 
@@ -267,11 +266,11 @@ export namespace PageStudentGrading {
    * @param studentGradingSheet The sheet to insert it into
    */
   export function InsertStudentDataRubrics(
-    student: PageGradingOverview.StudentData,
+    student: PageStudentDetails.StudentData,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
   ): void {
 
-    if (!student.rubricData) {
+    if (!student.gradingData) {
       Browser.msgBox("Student has no data!");
       return;
     }
@@ -286,7 +285,7 @@ export namespace PageStudentGrading {
     });
 
     // Go through the rubrics, get grades from local data
-    student.rubricData?.forEach(rubric => {
+    student.gradingData.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
         // Find the row with the corresponding tag
@@ -314,14 +313,18 @@ export namespace PageStudentGrading {
   }
 
   
-  export function GetStudentDataRubrics(
+  export function GetStudentGradingData(
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ): LibRubrics.Rubric[] {
+  ): PageStudentDetails.GradingData {
 
     // Get rubrics from rubrics page
-    const rubrics = PageRubrics.GetRubrics(rubricsSheet);
-    if (rubrics.length == 0) { Browser.msgBox("No rubrics found") }
+    const data: PageStudentDetails.GradingData = {
+      rubrics: PageRubrics.GetRubrics(rubricsSheet),
+      comment: ""
+    }
+
+    if (data.rubrics.length == 0) { Browser.msgBox("No rubrics found") }
 
     // Get the local values
     const localData = GetRubricsData(studentGradingSheet);
@@ -334,7 +337,7 @@ export namespace PageStudentGrading {
     });
 
     // Go through the rubrics, set grades from local data
-    rubrics.forEach(rubric => {
+    data.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
         // Find the row with the corresponding tag
@@ -355,8 +358,15 @@ export namespace PageStudentGrading {
       rubric.studentGrade = localData.values[rowNum][_ColCheckmark - 1];
     });
 
-    // Return the rubrics
-    return rubrics;
+    // -- Get the comment
+    const rowNum = tagRowNumbers.get("comment");
+    if (rowNum)
+    {
+      data.comment = localData.values[rowNum][_ColCheckmark - 1];
+    }
+
+    // Return the data
+    return data;
   }
 
   /**

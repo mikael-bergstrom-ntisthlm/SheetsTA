@@ -3,7 +3,7 @@ import { LibConfig } from "../libs/config.js";
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js";
 import { PageRubrics } from "./rubrics.js";
-import { PageStudentGrading } from "./studentgrading.js";
+import { PageStudentDetails } from "./studentdetails.js";
 
 export namespace PageGradingOverview {
 
@@ -36,11 +36,13 @@ export namespace PageGradingOverview {
       spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
       config: LibConfig.Config
     ) {
+      // TODO: Add some sort of warning if there's already data
 
       const gradingOverviewSheet = LibGSheets.CreateOrGetSheet(
         _GradingOverviewSheetName,
         spreadsheet, true
       );
+
       LibGSheets.ClearSheet(gradingOverviewSheet);
 
       const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
@@ -146,11 +148,13 @@ export namespace PageGradingOverview {
 
     function SetupRubricHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, highestCriteriaColId: number, rubrics: LibRubrics.Rubric[]) {
       // Get the range we need
-      let rubricHeaderRange = gradingOverviewSheet.getRange(
+      const rubricHeaderRange = gradingOverviewSheet.getRange(
         1, startColumn,
-        5, highestCriteriaColId + 3 // + for extra cols after rubrics (for results export)
+        5, highestCriteriaColId + 8 // + for extra cols after rubrics (for comment & results export)
       );
-      let rubricHeaderRangeValues = rubricHeaderRange.getValues();
+      const rubricHeaderRangeValues = rubricHeaderRange.getValues();
+
+      let lastColumnOfRubric = 0;
 
       // Go through the rubrics
       rubrics.forEach(rubric => {
@@ -160,6 +164,7 @@ export namespace PageGradingOverview {
 
         // Insert criteria info
         rubric.criteria.forEach(criteria => {
+          // TODO: Use tags matching instead
           rubricHeaderRangeValues[_RowHeading - 1][criteria.columnNumber - 1]
             = criteria.name;
           rubricHeaderRangeValues[_RowTag - 1][criteria.columnNumber - 1]
@@ -170,7 +175,7 @@ export namespace PageGradingOverview {
             = criteria.active;
         });
 
-        let lastColumnOfRubric = Math.max(...rubric.criteria.map(criteria => criteria.columnNumber));
+        lastColumnOfRubric = Math.max(...rubric.criteria.map(criteria => criteria.columnNumber));
 
         // -- Setup Grade column for rubric
         rubricHeaderRangeValues[_RowTag - 1][lastColumnOfRubric]
@@ -182,11 +187,23 @@ export namespace PageGradingOverview {
         FormatRubricSingleHeader(gradingOverviewSheet, startColumn, rubric);
       });
 
-      // Response doc header
-      rubricHeaderRangeValues[_RowHeading - 1][rubricHeaderRangeValues[_RowHeading - 1].length - 1] = "RESPONSE";
-      rubricHeaderRangeValues[_RowTag - 1][rubricHeaderRangeValues[_RowTag - 1].length - 1] = "responsedoc";
+      // -- Comment header
+      const commentColNum = highestCriteriaColId + 2;
+      rubricHeaderRangeValues[_RowHeading - 1][commentColNum] = "Comment";
+      rubricHeaderRangeValues[_RowTag - 1][commentColNum] = "comment";
 
+      // -- Response doc header
+      const responseDocColNum = highestCriteriaColId + 4
+      rubricHeaderRangeValues[_RowHeading - 1][responseDocColNum] = "RESPONSE";
+      rubricHeaderRangeValues[_RowTag - 1][responseDocColNum] = "responsedoc";
+      
+      // -- Insert values into range
       rubricHeaderRange.setValues(rubricHeaderRangeValues);
+
+      // -- Set column widths
+      gradingOverviewSheet.setColumnWidth(startColumn + commentColNum, 200);
+      gradingOverviewSheet.setColumnWidth(startColumn + commentColNum + 1, 20);
+      gradingOverviewSheet.setColumnWidth(startColumn + responseDocColNum, 200);
     }
 
     function FormatRubricSingleHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, rubric: LibRubrics.Rubric) {
@@ -223,7 +240,10 @@ export namespace PageGradingOverview {
 
       headingRange.setFontWeight("bold");
       headingRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
-      tagRange.setFontSize(8);
+      tagRange.setFontSize(8)
+        .setFontStyle("italic")
+        .setWrap(true)
+        .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
       tagRange.setFontStyle("italic");
     }
   }
@@ -251,7 +271,7 @@ export namespace PageGradingOverview {
       gradingOverviewSheet.getFrozenColumns()
     ).getValues()
 
-    const studentsData: StudentData[] = [];
+    const studentsData: PageStudentDetails.StudentData[] = [];
 
     studentValues.forEach(row => {
       // Skip empties
@@ -271,13 +291,13 @@ export namespace PageGradingOverview {
   /**
    * Insert rubric data for a specified user in the grading overview sheet
    * @param userID {string}
-   * @param rubrics {LibRubrics.Rubric[]}
+   * @param data {PageStudentDetails.GradingData}
    * @param gradingOverviewSheet {GoogleAppsScript.Spreadsheet.Sheet}
    * @returns 
    */
   export function InsertRubricData(
     userID: string,
-    rubrics: LibRubrics.Rubric[],
+    data: PageStudentDetails.GradingData,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
 
@@ -311,7 +331,7 @@ export namespace PageGradingOverview {
     const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet, colDataStart);
 
     // -- Go through all rubrics, insert checkmarks & grades
-    rubrics.forEach(rubric => {
+    data.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
         // Find the column with a matching tag
@@ -330,6 +350,14 @@ export namespace PageGradingOverview {
       studentData.values[0][colNumber] = rubric.studentGrade;
     });
 
+    const colNumber = tagColNumbers.get("comment"); // TODO: This tag is bad b/c someone might use it accidentally
+    if (colNumber === undefined) {
+      Browser.msgBox("No column found for comment");
+    }
+    else {
+      studentData.values[0][colNumber] = data.comment;
+    }
+
     // -- Re-insert values
     studentData.range.setValues(studentData.values);
   }
@@ -343,7 +371,7 @@ export namespace PageGradingOverview {
    */
   export function GetStudentDataRubrics(userID: string,
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): PageStudentDetails.StudentData | null {
 
     // TODO: Make this more precise
     const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
@@ -365,7 +393,10 @@ export namespace PageGradingOverview {
     ).getValues();
 
     // Get the rubrics from the rubrics sheet
-    student.rubricData = PageRubrics.GetRubrics(rubricsSheet);
+    student.gradingData = {
+      rubrics: PageRubrics.GetRubrics(rubricsSheet),
+      comment: "" // FIXME: Get the actual comment
+    }
 
     // Get the tags-row from the overview sheet
     const tagsValues = gradingOverviewSheet.getRange(
@@ -374,7 +405,7 @@ export namespace PageGradingOverview {
     ).getValues();
 
     // Go through the rubrics
-    student.rubricData.forEach(rubric => {
+    student.gradingData.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
         // TODO: remove reliance on columnNumber; just find matching tag. Use a set, like in student grading?
@@ -457,22 +488,6 @@ export namespace PageGradingOverview {
     });
 
     return tagColNumbers;
-  }
-
-  //#endregion
-
-  /* -----------------------------------------------------------------------------
-    INTERFACES
-  ------------------------------------------------------------------------------*/
-  //#region Interfaces
-
-  export interface StudentData {
-    id: string,
-    name: string,
-    surname: string,
-    email: string,
-    dataRange?: GoogleAppsScript.Spreadsheet.Range,
-    rubricData?: LibRubrics.Rubric[]
   }
 
   //#endregion

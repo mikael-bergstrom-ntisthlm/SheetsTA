@@ -1,3 +1,4 @@
+import { LibRubrics } from "../libs/rubrics.js";
 import { PageGradingOverview } from "./gradingoverview.js";
 
 export namespace PageStudentDetails {
@@ -23,7 +24,7 @@ export namespace PageStudentDetails {
 
   export function SetupHeaderBlock(
     targetSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    students: PageGradingOverview.StudentData[],
+    students: PageStudentDetails.StudentData[],
     setup: SheetSetup
   ) {
     // -- PREP
@@ -74,5 +75,26 @@ export namespace PageStudentDetails {
       setup.ColTag
     );
   }
+
+  /* -----------------------------------------------------------------------------
+    INTERFACES
+  ------------------------------------------------------------------------------*/
+  //#region Interfaces
+
+  // TODO: Move to library
+  export interface StudentData {
+    id: string,
+    name: string,
+    surname: string,
+    email: string,
+    gradingData?: GradingData,
+  }
+
+  export interface GradingData {
+    rubrics: LibRubrics.Rubric[],
+    comment: string
+  }
+
+  //#endregion
 
 }

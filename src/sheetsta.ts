@@ -225,7 +225,7 @@ function UpdateGradingOverviewActiveFromTemplate() {
 }
 
 function SetupStudentGradingSheet() {
-  PageStudentGrading.Setup(SpreadsheetApp.getActive());
+  PageStudentGrading.Setup.Setup(SpreadsheetApp.getActive());
 }
 
 function ClearStudentGradingSheet() {
@@ -245,7 +245,7 @@ function TransferFromStudentGradingToOverview() {
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
   if (userId === "") return;
 
-  const rubrics = PageStudentGrading.GetStudentDataRubrics(
+  const rubrics = PageStudentGrading.GetStudentGradingData(
     rubricsSheet,
     studentGradingSheet
   )
