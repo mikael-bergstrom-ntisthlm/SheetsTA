@@ -3,6 +3,7 @@ import { LibConfig } from "../libs/config.js";
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js";
 import { PageRubrics } from "./rubrics.js";
+import { PageStudentGrading } from "./studentgrading.js";
 
 export namespace PageGradingOverview {
 
@@ -109,10 +110,6 @@ export namespace PageGradingOverview {
       rubricHeaderRange.setValues(rubricHeaderRangeValues);
     }
 
-    export function UpdateActiveCriteriaToTemplate() {
-      // TODO: Implement
-    }
-
     function SetupRosterHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
 
       // Prepare headers
@@ -128,7 +125,7 @@ export namespace PageGradingOverview {
       let headerRange = gradingOverviewSheet.getRange(_RowTag, 1, 2, rosterHeaders.length);
       let headerRangeValues = headerRange.getValues();
 
-      // TODO: Use the consts for col-numbers
+      // TODO: Use the consts for col-numbers (wtf did I mean by this?)
       headerRangeValues[0] = rosterHeaders.map(
         v => LibRubrics.GetSafeTagName(v)
       );
@@ -231,66 +228,18 @@ export namespace PageGradingOverview {
     }
   }
 
-  /**
-   * Get the rubrics from the overview sheet
-   * @param spreadsheet 
-   * @returns {Rubric[]} an array of rubrics
-  */
-  export function GetRubrics(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): LibRubrics.Rubric[] {
-
-    // -- HEADER BLOCK VALUES RETRIEVAL
-    let headerBlock = gradingOverviewSheet.getRange(
-      1, gradingOverviewSheet.getFrozenColumns() + 1,
-      gradingOverviewSheet.getFrozenRows(),
-      gradingOverviewSheet.getLastColumn()
-    );
-
-    let headerValues = headerBlock?.getValues();
-
-    if (!headerValues || headerValues?.length == 0) return [];
-
-    // -- READ VALUES INTO DIFFERENT ROWS
-    let rubricTitleRow = headerValues[_RowRubricTitle - 1];
-    let activeRow = headerValues[_RowCriteriaActive - 1]
-    let gradeRow = headerValues[_RowGrade - 1];
-    let tagRow = headerValues[_RowTag - 1]
-    let criteriaRow = headerValues[_RowHeading - 1];
-
-    let rubrics: LibRubrics.Rubric[] = [];
-    let currentRubric: LibRubrics.Rubric | undefined = undefined;
-
-    // Go through all columns of the rubric title row
-    for (let i = 0; i < rubricTitleRow.length; i++) {
-      // Detect rubric start
-      if (rubricTitleRow[i] !== "") {
-        currentRubric = {
-          criteria: [],
-          columnNumber: gradingOverviewSheet.getFrozenColumns() + i,
-          name: rubricTitleRow[i],
-          gradeTag: LibRubrics.GetSafeTagName(rubricTitleRow[i]) + "grade"
-        }
-        rubrics.push(currentRubric);
-      }
-
-      // Detect criteria
-      if (gradeRow[i] !== "" && currentRubric) {
-        currentRubric.criteria.push(
-          {
-            name: criteriaRow[i],
-            tag: tagRow[i],
-            active: activeRow[i],
-            grade: gradeRow[i],
-            columnNumber: gradingOverviewSheet.getFrozenColumns() + i
-          }
-        )
-      }
-    }
-
-    return rubrics;
+  export function UpdateActiveCriteriaToTemplate() {
+    // TODO: Implement
   }
 
+  /* ---------------------------------------------------------------------------
+    TRANSFERRING DATA
+  ----------------------------------------------------------------------------*/
+  //#region Transferring
+
   /**
-   * Retrieve basic info of all students from a grading overview sheet
+   * Retrieve basic shallow info of all students from a grading overview sheet
+   * Does not include data ranges or rubrics
    * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - The spreadsheet whose overview to get students from
    * @returns {StudentData[]} an array of student data
    */
@@ -319,29 +268,70 @@ export namespace PageGradingOverview {
     return studentsData;
   }
 
-
   /**
-   * Get the details of a single user from the overview sheet, including data Range
-   * @param {string} userID - The user to get the details of
-   * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - The spreadsheet containing the overview sheet
-   * @returns {StudentData} the data of the student
+   * Insert rubric data for a specified user in the grading overview sheet
+   * @param userID {string}
+   * @param rubrics {LibRubrics.Rubric[]}
+   * @param gradingOverviewSheet {GoogleAppsScript.Spreadsheet.Sheet}
+   * @returns 
    */
-  export function GetStudentData(userID: string,
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): StudentData | null {
+  export function InsertRubricData(
+    userID: string,
+    rubrics: LibRubrics.Rubric[],
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ) {
 
+    // TODO: Make this more precise
+    const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
+
+    // -- Find the right student
     const studentsData = GetStudentsData(gradingOverviewSheet);
 
-    let rowNum = studentsData.findIndex(student => student.id === userID);
-    if (rowNum < 0) return null;
+    let studentRowNum = studentsData.findIndex(student => student.id === userID);
+    if (studentRowNum < 0) { Browser.msgBox("Student ID not found"); return null; };
 
-    const student = studentsData[rowNum];
-    student.dataRange = gradingOverviewSheet.getRange(_RowDataStart + rowNum, 1, 1, gradingOverviewSheet.getMaxColumns());
-    return student;
-  }
+    // -- Get the student's data
+    const studentData = GetGradingDataRow(
+      studentRowNum, colDataStart, gradingOverviewSheet
+    );
 
+    // -- Check if there are already values
+    const numValues = studentData.values[0].filter(v => v.length != 0).length;
+    if (numValues > 0) {
+      const answer = Browser.msgBox(
+        "Values already exist for that student. Overwrite?",
+        Browser.Buttons.YES_NO
+      );
+      if (answer == "no") {
+        return;
+      }
+    }
 
-  export function InsertRubricData(userID: any, rubrics: LibRubrics.Rubric[]) {
-    throw new Error("Function not implemented.");
+    // -- Make a map of which column belongs to which tag
+    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet, colDataStart);
+
+    // -- Go through all rubrics, insert checkmarks & grades
+    rubrics.forEach(rubric => {
+      rubric.criteria.forEach(criterion => {
+
+        // Find the column with a matching tag
+        const colNumber = tagColNumbers.get(criterion.tag);
+        if (colNumber === undefined) {
+          Browser.msgBox(`No column found for criterion '${criterion.name}'`);
+          return;
+        }
+
+        studentData.values[0][colNumber] = criterion.studentPassed ? "✔" : "✘";
+      });
+
+      // -- Set rubric grade
+      const colNumber = tagColNumbers.get(rubric.gradeTag);
+      if (colNumber === undefined) return;
+      studentData.values[0][colNumber] = rubric.studentGrade;
+    });
+
+    // -- Re-insert values
+    studentData.range.setValues(studentData.values);
   }
 
   /**
@@ -387,7 +377,7 @@ export namespace PageGradingOverview {
     student.rubricData.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
-        // TODO: remove reliance on columnNumber; just find matching tag
+        // TODO: remove reliance on columnNumber; just find matching tag. Use a set, like in student grading?
         // Check if the tags match
         if (criterion.tag == tagsValues[0][criterion.columnNumber - 1]) {
           criterion.studentPassed =
@@ -413,6 +403,69 @@ export namespace PageGradingOverview {
     return student;
   }
 
+  //#endregion
+
+  /* -----------------------------------------------------------------------------
+    HELPER FUNCTIONS
+  ------------------------------------------------------------------------------*/
+  //#region helper functions
+
+  function GetGradingDataRow(
+    offset: number,
+    colDataStart: number,
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ): LibGSheets.RangeValuePair {
+
+    const data = gradingOverviewSheet.getRange(
+      _RowDataStart + offset,
+      colDataStart,
+      1, // only one row
+      gradingOverviewSheet.getMaxColumns() - colDataStart
+    );
+
+    return {
+      range: data,
+      values: data.getValues()
+    }
+  }
+
+  /**
+   * Creates a Map<string, number> from a grading overview sheet, where the keys
+   *   are the tags and the values are the corresponding column number, counted 
+   *   from colDataStart
+   * @param gradingOverviewSheet {GoogleAppsScript.Spreadsheet.Sheet} The grading overview sheet
+   * @param colDataStart {number} The column where grading/rubric/criteria data starts
+   * @returns {Map<string, number>} The finished map
+   */
+  function MakeTagColNumberMap(
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    colDataStart: number
+  ): Map<string, number> {
+
+    // Get the tags-row from the overview sheet
+    const tagsValues = gradingOverviewSheet.getRange(
+      _RowTag,
+      colDataStart,
+      1, // only one row
+      gradingOverviewSheet.getMaxColumns() - colDataStart
+    ).getValues();
+
+    const tagColNumbers = new Map<string, number>();
+
+    tagsValues[0].forEach((col, colNum) => {
+      tagColNumbers.set("" + col, colNum);
+    });
+
+    return tagColNumbers;
+  }
+
+  //#endregion
+
+  /* -----------------------------------------------------------------------------
+    INTERFACES
+  ------------------------------------------------------------------------------*/
+  //#region Interfaces
+
   export interface StudentData {
     id: string,
     name: string,
@@ -421,4 +474,6 @@ export namespace PageGradingOverview {
     dataRange?: GoogleAppsScript.Spreadsheet.Range,
     rubricData?: LibRubrics.Rubric[]
   }
+
+  //#endregion
 }

@@ -139,7 +139,7 @@ export namespace LibGSheets {
       .getMergedRanges().forEach(mergedRange => mergedRange.breakApart());
   }
 
-
+  // TODO: Check how much this is actually used; doesn't feel very readable
   /**
    * Go through the currently selected range, run all rows through the given
    *   row processor function, and insert the results to the right of the 
@@ -181,4 +181,11 @@ export namespace LibGSheets {
   // A RowProcessor is a function that takes an any[] array (a row) as parameter
   //  and returns a string array
   type RowProcessor = (row: any[]) => string[];
+
+
+  // A pair consisting of a google sheets range and the values extracted from it (w/ the right dimension)
+  export interface RangeValuePair {
+    range: GoogleAppsScript.Spreadsheet.Range,
+    values: any[][]
+  }
 }

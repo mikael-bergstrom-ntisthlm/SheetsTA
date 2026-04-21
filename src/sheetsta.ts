@@ -250,7 +250,7 @@ function TransferFromStudentGradingToOverview() {
     studentGradingSheet
   )
 
-  // PageGradingOverview.InsertRubricData(userId, rubrics);
+  PageGradingOverview.InsertRubricData(userId, rubrics, gradingOverviewSheet);
 
   // PageStudentGrading.TransferToGradingOverviewSheet(
   //   userId,
@@ -316,6 +316,7 @@ function SanitizeGithubURLs() {
 //#endregion
 
 // -----------------------------------------------------------------------------
+// TODO: Unify Setup naming & structure for all pages (Setup sub-namespace etc)
 // TODO: Setup grading overview page based on roster, rubrics & additional config(?)
 //         Extra columns
 // TODO: See single user's results (incl. rubric matrix)

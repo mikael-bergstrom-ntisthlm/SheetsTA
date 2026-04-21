@@ -260,11 +260,16 @@ export namespace PageStudentGrading {
   ----------------------------------------------------------------------------*/
   //#region Transferring
 
-
+  /**
+   * Insert Student data from some other source, using criteria tags to match
+   * with student grading sheet rows
+   * @param student The student data to insert
+   * @param studentGradingSheet The sheet to insert it into
+   */
   export function InsertStudentDataRubrics(
     student: PageGradingOverview.StudentData,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ) {
+  ): void {
 
     if (!student.rubricData) {
       Browser.msgBox("Student has no data!");
@@ -308,7 +313,7 @@ export namespace PageStudentGrading {
     )
   }
 
-  // TODO: CURRENT PROJECT
+  
   export function GetStudentDataRubrics(
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
@@ -355,121 +360,11 @@ export namespace PageStudentGrading {
   }
 
   /**
-   * Exports a user's grades from a student grading sheet to an overview sheet
-   * @param userId - the ID of the user
-   * @param studentGradingSheet - the student grading sheet
-   * @param gradingOverviewSheet - the grading overview sheet
-   * @param clearAfterTransfer - whether to empty the student grading sheet after
-   */
-  export function TransferToGradingOverviewSheet(
-    userId: string,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    clearAfterTransfer: boolean
-  ): void {
-
-    // -- PREP
-    const overviewSheetData = PageGradingOverview.GetStudentData(userId, gradingOverviewSheet)?.dataRange;
-    const studentGradingData = GetRubricsData(studentGradingSheet);
-
-    if (!overviewSheetData) {
-      SpreadsheetApp.getUi().alert("User not found!");
-      return;
-    }
-
-    if (!studentGradingData) return;
-
-    // Reformat student grading data into array of criteria
-    let studentGradingCriterias: LibRubrics.Criteria[] = GetCriteriaFromStudentGradingData(studentGradingData);
-
-    // Find the lowest criterium column number
-    let firstCriteriaColumn = studentGradingCriterias.reduce((lowest, criteria) => {
-      return (lowest.columnNumber < criteria.columnNumber)
-        ? lowest
-        : criteria
-    }).columnNumber;
-
-    // TODO: RangeValuePair, and those should probably be a class anyway, or something... #refactor
-    const overviewSheetGradingData = overviewSheetData.offset(0, firstCriteriaColumn, 1, overviewSheetData.getWidth() - firstCriteriaColumn);
-    const overviewSheetGradingDataValues = overviewSheetGradingData.getValues();
-
-    // -- PROCESS
-    let overrideChecked: boolean = false;
-
-    // Go through all rows of grading data; making cancelled = true if any returns true
-    let cancelled = studentGradingCriterias.some((criterium, rowNum) => {
-
-      // Get the target column from the rubrics data
-      let targetColumnNum = criterium.columnNumber - firstCriteriaColumn;
-
-      // If there's already data in the cell & we haven't checked before; ask.
-      if (!(overviewSheetGradingDataValues[0][targetColumnNum].length == 0) && !overrideChecked) {
-        const ui = SpreadsheetApp.getUi();
-        let response = ui.alert(
-          "Warning!",
-          "Grading data for student already exists.Overwrite ? ",
-          ui.ButtonSet.YES_NO
-        );
-        if (response === ui.Button.NO) return true;
-
-        overrideChecked = true;
-      }
-
-      // Transfer data point
-      overviewSheetGradingDataValues[0][targetColumnNum] = criterium.grade;
-
-      return false;
-    });
-
-
-    // If we cancelled out, just return
-    if (cancelled) return;
-
-    // -- POST-PROCESS
-    overviewSheetGradingData.setValues(overviewSheetGradingDataValues);
-
-    if (clearAfterTransfer) {
-      studentGradingData.values.forEach((row, rownum) => {
-        row[_ColCheckmark - 1] = GetClearGradingFor(row[_ColCheckmark - 1])
-      })
-
-      studentGradingData.range.setValues(studentGradingData.values);
-      ClearSelectedUserId(studentGradingSheet);
-    }
-  }
-
-  /**
-   * Go through a set of student grading data and extract the criteria
-   * @param {RangeValuePair} studentGradingData 
-   * @returns An array of criteria
-   */
-  function GetCriteriaFromStudentGradingData(studentGradingData: RangeValuePair) {
-    let studentGradingCriterias: LibRubrics.Criteria[] = [];
-
-    studentGradingData.values.forEach(row => {
-      let targetColumnNum = parseInt(row[_ColColnum - 1]);
-      if (isNaN(targetColumnNum)) return;
-
-      // Create and add criterium
-      let criterium: LibRubrics.Criteria = {
-        name: row[_ColName],
-        tag: "", // Not available in the student grading sheet
-        active: row[_ColActive],
-        grade: row[_ColCheckmark - 1],
-        columnNumber: row[_ColColnum - 1]
-      };
-
-      studentGradingCriterias.push(criterium);
-    });
-    return studentGradingCriterias;
-  }
-
-  /**
    * Get the entire rubrics block (range+values) of a student grading sheet
    * @param {GoogleAppsScript.Spreadsheet.Sheet} studentGradingSheet - The student grading sheet
    * @returns {RangeValuePair} A value-range pair
    */
-  function GetRubricsData(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): RangeValuePair {
+  function GetRubricsData(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): LibGSheets.RangeValuePair {
 
     const gradingDataRange = studentGradingSheet
       .getRange(_RowHeader + 1, 1, // Start at the row below the header
@@ -526,9 +421,5 @@ export namespace PageStudentGrading {
 
   //#endregion
 
-  // A pair consisting of a google sheets range and the values extracted from it (w/ the right dimension)
-  interface RangeValuePair {
-    range: GoogleAppsScript.Spreadsheet.Range,
-    values: any[][]
-  }
+
 }
