@@ -158,7 +158,7 @@ export namespace PageStudentGrading {
         .setHorizontalAlignment("right")
         .setFontWeight("bold")
         .offset(0, 3, 1, 3) // get writing box
-          // TODO: Four magic numbers; not ideal
+        // TODO: Four magic numbers; not ideal
         .setBackgroundRGB(_EditBoxColor[0], _EditBoxColor[1], _EditBoxColor[2])
         .merge();
 
@@ -306,13 +306,19 @@ export namespace PageStudentGrading {
       localData.values[rowNum][_ColCheckmark - 1] = rubric.studentGrade;
     });
 
+    // Set the comment
+    const rowNum = tagRowNumbers.get("comment");
+    if (rowNum) {
+      localData.values[rowNum][_ColCheckmark - 1] = student.gradingData.comment;
+    }
+
     // Insert the data
     localData.range.setValues(
       localData.values
     )
   }
 
-  
+
   export function GetStudentGradingData(
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
@@ -360,8 +366,7 @@ export namespace PageStudentGrading {
 
     // -- Get the comment
     const rowNum = tagRowNumbers.get("comment");
-    if (rowNum)
-    {
+    if (rowNum) {
       data.comment = localData.values[rowNum][_ColCheckmark - 1];
     }
 

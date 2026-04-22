@@ -196,7 +196,7 @@ export namespace PageGradingOverview {
       const responseDocColNum = highestCriteriaColId + 4
       rubricHeaderRangeValues[_RowHeading - 1][responseDocColNum] = "RESPONSE";
       rubricHeaderRangeValues[_RowTag - 1][responseDocColNum] = "responsedoc";
-      
+
       // -- Insert values into range
       rubricHeaderRange.setValues(rubricHeaderRangeValues);
 
@@ -376,6 +376,11 @@ export namespace PageGradingOverview {
     // TODO: Make this more precise
     const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
 
+    // -- Make a map of which column belongs to which tag
+    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet, colDataStart);
+
+    // -- Get the student data values
+
     // Find the right student
     const studentsData = GetStudentsData(gradingOverviewSheet);
 
@@ -392,7 +397,7 @@ export namespace PageGradingOverview {
       gradingOverviewSheet.getMaxColumns() - colDataStart
     ).getValues();
 
-    // Get the rubrics from the rubrics sheet
+    // -- Get the rubrics from the rubrics sheet
     student.gradingData = {
       rubrics: PageRubrics.GetRubrics(rubricsSheet),
       comment: "" // FIXME: Get the actual comment
@@ -408,15 +413,15 @@ export namespace PageGradingOverview {
     student.gradingData.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
-        // TODO: remove reliance on columnNumber; just find matching tag. Use a set, like in student grading?
-        // Check if the tags match
-        if (criterion.tag == tagsValues[0][criterion.columnNumber - 1]) {
-          criterion.studentPassed =
-            studentDataValues[0][criterion.columnNumber - 1] == "✔";
-
-        } else {
-          Browser.msgBox(`MISMATCH:\\n${criterion.tag} != ${tagsValues[0][criterion.columnNumber - 1]}`);
+        // Find the column with a matching tag
+        const colNumber = tagColNumbers.get(criterion.tag);
+        if (colNumber === undefined) {
+          Browser.msgBox(`No column found for criterion '${criterion.name}'`);
+          return;
         }
+
+        criterion.studentPassed =
+          studentDataValues[0][colNumber] == "✔";
       });
 
       // Find column of rubric's overall grade
@@ -430,6 +435,15 @@ export namespace PageGradingOverview {
       rubric.studentGrade = studentDataValues[0][gradeCol];
 
     });
+
+    // Get comment
+    const colNumber = tagColNumbers.get("comment");
+    if (colNumber === undefined) {
+      Browser.msgBox("No column found for comment");
+    }
+    else {
+      student.gradingData.comment = studentDataValues[0][colNumber];
+    }
 
     return student;
   }
