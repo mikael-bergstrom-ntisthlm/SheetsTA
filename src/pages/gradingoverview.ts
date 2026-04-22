@@ -2,8 +2,8 @@ import { LibGClassroom } from "../libs/classroom.js";
 import { LibConfig } from "../libs/config.js";
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js";
+import { LibStudents } from "../libs/students.js";
 import { PageRubrics } from "./rubrics.js";
-import { PageStudentDetails } from "./studentdetails.js";
 
 export namespace PageGradingOverview {
 
@@ -296,7 +296,7 @@ export namespace PageGradingOverview {
       gradingOverviewSheet.getFrozenColumns()
     ).getValues()
 
-    const studentsData: PageStudentDetails.StudentData[] = [];
+    const studentsData: LibStudents.StudentData[] = [];
 
     studentValues.forEach(row => {
       // Skip empties
@@ -322,7 +322,7 @@ export namespace PageGradingOverview {
    */
   export function InsertRubricData(
     userID: string,
-    data: PageStudentDetails.GradingData,
+    data: LibStudents.GradingData,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
 
@@ -396,7 +396,7 @@ export namespace PageGradingOverview {
    */
   export function GetStudentDataRubrics(userID: string,
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): PageStudentDetails.StudentData | null {
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): LibStudents.StudentData | null {
 
     // TODO: Make this more precise
     const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
@@ -425,7 +425,7 @@ export namespace PageGradingOverview {
     // -- Get the rubrics from the rubrics sheet
     student.gradingData = {
       rubrics: PageRubrics.GetRubrics(rubricsSheet),
-      comment: "" // FIXME: Get the actual comment
+      comment: ""
     }
 
     // Get the tags-row from the overview sheet

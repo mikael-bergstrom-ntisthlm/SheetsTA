@@ -11,7 +11,11 @@ export namespace PageRubrics {
   const _ColCriteriaGrade = 3;
   const _ColCriteriaActive = 4;
 
-  // TODO: Document this
+  /**
+   * Get an array of Rubrics and criteria from a rubrics setup sheet
+   * @param rubricsSheet {GoogleAppsScript.Spreadsheet.Sheet}
+   * @returns {LibRubrics.Rubric[]}
+   */
   export function GetRubrics(rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet): LibRubrics.Rubric[] {
 
     let rubricsData: string[][] = rubricsSheet.getRange(
@@ -56,6 +60,11 @@ export namespace PageRubrics {
     return rubrics;
   }
 
+  /**
+   * Get the default rubrics sheet (defined by _RubricsSheetName) from a spreadsheet file
+   * @param spreadsheet 
+   * @returns 
+   */
   export function GetDefaultRubricsSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
     GoogleAppsScript.Spreadsheet.Sheet | null {
 

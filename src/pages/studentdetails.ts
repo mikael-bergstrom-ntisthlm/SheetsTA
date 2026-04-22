@@ -1,12 +1,10 @@
-import { LibRubrics } from "../libs/rubrics.js";
-import { PageGradingOverview } from "./gradingoverview.js";
+import { LibStudents } from "../libs/students.js";
 
 export namespace PageStudentDetails {
 
   export interface SheetSetup {
     ColRubric: number;
     ColCriteria: number;
-    ColColnum: number;
     ColTag: number;
     ColCheckmark: number;
     ColGrade: number;
@@ -24,7 +22,7 @@ export namespace PageStudentDetails {
 
   export function SetupHeaderBlock(
     targetSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    students: PageStudentDetails.StudentData[],
+    students: LibStudents.StudentData[],
     setup: SheetSetup
   ) {
     // -- PREP
@@ -47,7 +45,6 @@ export namespace PageStudentDetails {
     // Setup data headers
     headerValues[setup.RowHeader - 1][setup.ColRubric - 1] = "Rubric";
     headerValues[setup.RowHeader - 1][setup.ColCriteria - 1] = "Criteria";
-    headerValues[setup.RowHeader - 1][setup.ColColnum - 1] = "Column number";
     headerValues[setup.RowHeader - 1][setup.ColTag - 1] = "Tag";
 
     if (setup.IncludeCheckboxCol) {
@@ -64,11 +61,10 @@ export namespace PageStudentDetails {
     targetSheet.setFrozenRows(setup.RowHeader);
   }
 
-  function GetHighestColumnNumber(setup:SheetSetup) {
+  export function GetHighestColumnNumber(setup:SheetSetup) {
     return Math.max(
       setup.ColActive,
       setup.ColCheckmark,
-      setup.ColColnum,
       setup.ColCriteria,
       setup.ColGrade,
       setup.ColRubric,
@@ -76,25 +72,6 @@ export namespace PageStudentDetails {
     );
   }
 
-  /* -----------------------------------------------------------------------------
-    INTERFACES
-  ------------------------------------------------------------------------------*/
-  //#region Interfaces
 
-  // TODO: Move to library
-  export interface StudentData {
-    id: string,
-    name: string,
-    surname: string,
-    email: string,
-    gradingData?: GradingData,
-  }
-
-  export interface GradingData {
-    rubrics: LibRubrics.Rubric[],
-    comment: string
-  }
-
-  //#endregion
 
 }

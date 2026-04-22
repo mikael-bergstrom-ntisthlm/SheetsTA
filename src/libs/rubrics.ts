@@ -27,6 +27,5 @@ export namespace LibRubrics {
     active: boolean;
     grade: string;
     studentPassed?: boolean;
-    // columnNumber: number;
   }
 } 

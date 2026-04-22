@@ -251,12 +251,7 @@ function TransferFromStudentGradingToOverview() {
   )
 
   PageGradingOverview.InsertRubricData(userId, rubrics, gradingOverviewSheet);
-
-  // PageStudentGrading.TransferToGradingOverviewSheet(
-  //   userId,
-  //   studentGradingSheet,
-  //   gradingOverviewSheet,
-  //   true);
+  PageStudentGrading.ClearGrading(studentGradingSheet);
 }
 
 function TransferFromOverviewToStudentGrading() {

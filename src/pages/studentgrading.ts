@@ -1,5 +1,6 @@
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js"
+import { LibStudents } from "../libs/students.js";
 import { PageGradingOverview } from "./gradingoverview.js";
 import { PageRubrics } from "./rubrics.js";
 import { PageStudentDetails } from "./studentdetails.js";
@@ -13,11 +14,10 @@ export namespace PageStudentGrading {
 
   const _ColRubric: number = 1;
   const _ColCriteria: number = 2;
-  const _ColColnum: number = 3;
-  const _ColTag: number = 4;
-  const _ColCheckmark: number = 5;
-  const _ColGrade: number = 6;
-  const _ColActive: number = 7;
+  const _ColTag: number = 3;
+  const _ColCheckmark: number = 4;
+  const _ColGrade: number = 5;
+  const _ColActive: number = 6;
 
   const _RowHeader: number = 3;
   const _EditBoxColor: number[] = [217, 234, 211];
@@ -37,7 +37,6 @@ export namespace PageStudentGrading {
       const setup: PageStudentDetails.SheetSetup = {
         ColRubric: _ColRubric,
         ColCriteria: _ColCriteria,
-        ColColnum: _ColColnum,
         ColTag: _ColTag,
         ColCheckmark: _ColCheckmark,
         ColGrade: _ColGrade,
@@ -80,12 +79,14 @@ export namespace PageStudentGrading {
         + rubrics.length * 2 // Space for grade + spacing
         + 3; // Space for comment block
 
-      LibGSheets.SetSheetSize(studentGradingSheet, 8, totalHeight); //TODO: Get rid of the hardcoded 8 plz
+      const totalWidth = PageStudentDetails.GetHighestColumnNumber(setup) + 1;
+
+      LibGSheets.SetSheetSize(studentGradingSheet, totalWidth, totalHeight);
 
       // -- SETUP BLOCKS
 
       PageStudentDetails.SetupHeaderBlock(studentGradingSheet, students, setup);
-      SetupRubricsBlock(studentGradingSheet, rubrics);
+      SetupRubricsBlock(studentGradingSheet, rubrics, setup);
 
       // -- SET WIDTHS
       studentGradingSheet
@@ -93,7 +94,6 @@ export namespace PageStudentGrading {
         .setColumnWidth(_ColCriteria, 275)
         .setColumnWidth(_ColGrade, 70)
         .setColumnWidth(_ColActive, 70)
-        .hideColumns(_ColColnum);
       studentGradingSheet
         .hideColumns(_ColTag);
 
@@ -106,13 +106,18 @@ export namespace PageStudentGrading {
      */
     export function SetupRubricsBlock(
       studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-      rubrics: LibRubrics.Rubric[]
+      rubrics: LibRubrics.Rubric[],
+      setup: PageStudentDetails.SheetSetup
     ) {
       //TODO: Is the plan to move this too to studentdetails?
 
-      let rubricStartRow = _RowHeader + 1;
+      const rubricStartRow = _RowHeader + 1;
+      const width = PageStudentDetails.GetHighestColumnNumber(setup);
 
-      const dataRange = studentGradingSheet.getRange(rubricStartRow, 1, studentGradingSheet.getMaxRows() - _RowHeader, 7); // TODO: Get rid of this hardcoded 7
+      const dataRange = studentGradingSheet.getRange(
+        rubricStartRow, 1,
+        studentGradingSheet.getMaxRows() - _RowHeader,
+        width);
       const dataValues = dataRange.getValues();
 
       // -- RUBRICS ROWS
@@ -125,18 +130,18 @@ export namespace PageStudentGrading {
 
         // Insert rows from criteria
         rubric.criteria.forEach(criteria => {
-          dataValues[row][_ColCriteria - 1] = criteria.name;
-          dataValues[row][_ColTag - 1] = criteria.tag;
-          dataValues[row][_ColCheckmark - 1] = "✘";
-          dataValues[row][_ColGrade - 1] = criteria.grade;
-          dataValues[row][_ColActive - 1] = criteria.active;
+          dataValues[row][setup.ColCriteria - 1] = criteria.name;
+          dataValues[row][setup.ColTag - 1] = criteria.tag;
+          dataValues[row][setup.ColCheckmark - 1] = "✘";
+          dataValues[row][setup.ColGrade - 1] = criteria.grade;
+          dataValues[row][setup.ColActive - 1] = criteria.active;
           row++;
         });
 
         // "Grade" on its own row
-        dataValues[row][_ColCriteria - 1] = "Grade";
-        dataValues[row][_ColTag - 1] = rubric.gradeTag;
-        dataValues[row][_ColActive - 1] = true;
+        dataValues[row][setup.ColCriteria - 1] = "Grade";
+        dataValues[row][setup.ColTag - 1] = rubric.gradeTag;
+        dataValues[row][setup.ColActive - 1] = true;
 
         row += 2;
 
@@ -145,13 +150,13 @@ export namespace PageStudentGrading {
       });
 
       // -- COMMENT ROW
-      dataValues[row + 1][_ColCriteria - 1] = "Comment";
-      dataValues[row + 1][_ColTag - 1] = "comment";
+      dataValues[row + 1][setup.ColCriteria - 1] = "Comment";
+      dataValues[row + 1][setup.ColTag - 1] = "comment";
 
-      dataRange.offset(row + 1, _ColCriteria - 1, 1, 1)
+      dataRange.offset(row + 1, setup.ColCriteria - 1, 1, 1)
         .setHorizontalAlignment("right")
         .setFontWeight("bold")
-        .offset(0, 3, 1, 3) // get writing box
+        .offset(0, 2, 1, 3) // get writing box
         // TODO: Four magic numbers; not ideal
         .setBackgroundRGB(_EditBoxColor[0], _EditBoxColor[1], _EditBoxColor[2])
         .merge();
@@ -260,7 +265,7 @@ export namespace PageStudentGrading {
    * @param studentGradingSheet The sheet to insert it into
    */
   export function InsertStudentDataRubrics(
-    student: PageStudentDetails.StudentData,
+    student: LibStudents.StudentData,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
   ): void {
 
@@ -316,10 +321,10 @@ export namespace PageStudentGrading {
   export function GetStudentGradingData(
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ): PageStudentDetails.GradingData {
+  ): LibStudents.GradingData {
 
     // Get rubrics from rubrics page
-    const data: PageStudentDetails.GradingData = {
+    const data: LibStudents.GradingData = {
       rubrics: PageRubrics.GetRubrics(rubricsSheet),
       comment: ""
     }
@@ -378,7 +383,7 @@ export namespace PageStudentGrading {
     const gradingDataRange = studentGradingSheet
       .getRange(_RowHeader + 1, 1, // Start at the row below the header
         studentGradingSheet.getLastRow() - _RowHeader, // Get all the rows, minus the header
-        Math.max(_ColActive, _ColCheckmark, _ColColnum, _ColCriteria, _ColGrade, _ColRubric)); // Find the rightmost column
+        Math.max(_ColActive, _ColCheckmark, _ColCriteria, _ColGrade, _ColRubric)); // Find the rightmost column
 
     return {
       values: gradingDataRange.getValues(),
@@ -406,8 +411,6 @@ export namespace PageStudentGrading {
 
     const checkmarkValues = checkmarkRange.getValues().map(row => {
       return [GetClearGradingFor(row[0])]
-      // if (row[0] === "✔" || row[0] === "✘") return ["✘"]
-      // else return [""];
     });
 
     checkmarkRange.setValues(checkmarkValues);
