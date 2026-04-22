@@ -126,7 +126,6 @@ export namespace PageStudentGrading {
         // Insert rows from criteria
         rubric.criteria.forEach(criteria => {
           dataValues[row][_ColCriteria - 1] = criteria.name;
-          dataValues[row][_ColColnum - 1] = criteria.columnNumber;
           dataValues[row][_ColTag - 1] = criteria.tag;
           dataValues[row][_ColCheckmark - 1] = "✘";
           dataValues[row][_ColGrade - 1] = criteria.grade;
@@ -137,7 +136,6 @@ export namespace PageStudentGrading {
         // "Grade" on its own row
         dataValues[row][_ColCriteria - 1] = "Grade";
         dataValues[row][_ColTag - 1] = rubric.gradeTag;
-        dataValues[row][_ColColnum - 1] = rubric.criteria.slice(-1)[0].columnNumber + 1;
         dataValues[row][_ColActive - 1] = true;
 
         row += 2;
@@ -149,10 +147,6 @@ export namespace PageStudentGrading {
       // -- COMMENT ROW
       dataValues[row + 1][_ColCriteria - 1] = "Comment";
       dataValues[row + 1][_ColTag - 1] = "comment";
-
-      // Offset is 3 because last criteria's colnr + last grade colnr + 2.
-      const commentColNr = 3 + (rubrics.at(-1)?.criteria.at(-1)?.columnNumber ?? 0);
-      dataValues[row + 1][_ColColnum - 1] = commentColNr.toString();
 
       dataRange.offset(row + 1, _ColCriteria - 1, 1, 1)
         .setHorizontalAlignment("right")

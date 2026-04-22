@@ -22,17 +22,14 @@ export namespace PageRubrics {
 
     let rubrics: LibRubrics.Rubric[] = [];
     let currentRubric: LibRubrics.Rubric | undefined = undefined;
-    let currentColNumber: number = 0;
 
     rubricsData.forEach(rubricDataRow => {
 
       // Check if rubric column contains a new rubric title
       if (rubricDataRow[_ColRubricTitle - 1] !== "") {
-        currentColNumber += 1;
         currentRubric = {
           name: rubricDataRow[_ColRubricTitle - 1],
           criteria: [],
-          columnNumber: currentColNumber,
           gradeTag: LibRubrics.GetSafeTagName(rubricDataRow[_ColRubricTitle - 1]) + "grade"
         }
         rubrics.push(currentRubric);
@@ -50,13 +47,10 @@ export namespace PageRubrics {
               rubricDataRow[_ColCriteriaName - 1]
             ),
             grade: rubricDataRow[_ColCriteriaGrade - 1],
-            columnNumber: currentColNumber,
             active: rubricDataRow[_ColCriteriaActive - 1] ? true : false
           }
         )
       }
-
-      currentColNumber++;
     });
 
     return rubrics;

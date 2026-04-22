@@ -52,25 +52,23 @@ export namespace PageGradingOverview {
       let rubrics = PageRubrics.GetRubrics(rubricsSheet);
 
       // Initialize some values
-      let allCriteria = rubrics.flatMap(rubric => rubric.criteria);
-      let highestCriteriaColId = Math.max(...allCriteria.map(criteria => criteria.columnNumber));
+
 
       let totalWidth = LibGClassroom.rosterHeaders.length + 2
-        + allCriteria.length
-        + rubrics.length * 2
-        + 2; // margin
+        + GetTotalWidthNeeded(rubrics) + 4;
+
       LibGSheets.SetSheetWidth(gradingOverviewSheet, totalWidth);
 
       // Setup headers
       SetupRosterHeader(gradingOverviewSheet);
       let startColumn = gradingOverviewSheet.getLastColumn() + 1;
-      SetupRubricHeader(gradingOverviewSheet, startColumn, highestCriteriaColId, rubrics);
+      SetupRubricHeader(gradingOverviewSheet, startColumn, rubrics);
 
       // Setup data areas
       SetupRosterArea(gradingOverviewSheet);
 
       // -- Set overall visuals
-      FormatHeader(gradingOverviewSheet, startColumn, highestCriteriaColId);
+      FormatHeader(gradingOverviewSheet);
     }
 
     function SetupRosterArea(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
@@ -93,21 +91,32 @@ export namespace PageGradingOverview {
       let rubrics = PageRubrics.GetRubrics(rubricsSheet);
 
       let startColumn = gradingOverviewSheet.getFrozenColumns();
-      let allCriteria = rubrics.flatMap(rubric => rubric.criteria);
-      let highestCriteriaColId = Math.max(...allCriteria.map(criteria => criteria.columnNumber));
+      const totalWidthNeeded = GetTotalWidthNeeded(rubrics) + 4;
 
       // Get the range we need
       let rubricHeaderRange = gradingOverviewSheet.getRange(
         _RowCriteriaActive, startColumn,
-        1, startColumn + highestCriteriaColId
+        1, startColumn + totalWidthNeeded
       );
       let rubricHeaderRangeValues = rubricHeaderRange.getValues();
 
+      // -- Make a map of which column belongs to which tag
+      const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet, startColumn);
 
-      allCriteria.forEach(criteria => {
-        rubricHeaderRangeValues[0][criteria.columnNumber] = criteria.active;
+      // -- Go through all rubrics, insert checkmarks & grades
+      rubrics.forEach(rubric => {
+        rubric.criteria.forEach(criterion => {
+
+          // Find the column with a matching tag
+          const colNumber = tagColNumbers.get(criterion.tag);
+          if (colNumber === undefined) {
+            Browser.msgBox(`No column found for criterion '${criterion.name}'`);
+            return;
+          }
+
+          rubricHeaderRangeValues[0][colNumber] = criterion.active
+        });
       });
-
 
       rubricHeaderRange.setValues(rubricHeaderRangeValues);
     }
@@ -146,54 +155,70 @@ export namespace PageGradingOverview {
       gradingOverviewSheet.hideColumns(_ColEmail);
     }
 
-    function SetupRubricHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, highestCriteriaColId: number, rubrics: LibRubrics.Rubric[]) {
+    function GetTotalWidthNeeded(rubrics: LibRubrics.Rubric[]): number {
+      return LibRubrics.CountCriteria(rubrics) + rubrics.length * 2;
+    }
+
+    function SetupRubricHeader(
+      gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
+      startColumn: number,
+      rubrics: LibRubrics.Rubric[]) {
       // Get the range we need
+
+      const totalWidthNeeded = GetTotalWidthNeeded(rubrics) + 4;
+
       const rubricHeaderRange = gradingOverviewSheet.getRange(
         1, startColumn,
-        5, highestCriteriaColId + 8 // + for extra cols after rubrics (for comment & results export)
+        5, totalWidthNeeded
       );
       const rubricHeaderRangeValues = rubricHeaderRange.getValues();
 
-      let lastColumnOfRubric = 0;
+      let currentCol = 0;
 
       // Go through the rubrics
       rubrics.forEach(rubric => {
+
+        FormatRubricSingleHeader(gradingOverviewSheet, startColumn + currentCol, rubric);
+
         // Set rubric heading
-        rubricHeaderRangeValues[_RowRubricTitle - 1][rubric.columnNumber - 1]
+        rubricHeaderRangeValues[_RowRubricTitle - 1][currentCol]
           = rubric.name;
 
         // Insert criteria info
         rubric.criteria.forEach(criteria => {
-          // TODO: Use tags matching instead
-          rubricHeaderRangeValues[_RowHeading - 1][criteria.columnNumber - 1]
+          rubricHeaderRangeValues[_RowHeading - 1][currentCol]
             = criteria.name;
-          rubricHeaderRangeValues[_RowTag - 1][criteria.columnNumber - 1]
+          rubricHeaderRangeValues[_RowTag - 1][currentCol]
             = criteria.tag;
-          rubricHeaderRangeValues[_RowGrade - 1][criteria.columnNumber - 1]
+          rubricHeaderRangeValues[_RowGrade - 1][currentCol]
             = criteria.grade;
-          rubricHeaderRangeValues[_RowCriteriaActive - 1][criteria.columnNumber - 1]
+          rubricHeaderRangeValues[_RowCriteriaActive - 1][currentCol]
             = criteria.active;
+
+          currentCol++;
         });
 
-        lastColumnOfRubric = Math.max(...rubric.criteria.map(criteria => criteria.columnNumber));
-
         // -- Setup Grade column for rubric
-        rubricHeaderRangeValues[_RowTag - 1][lastColumnOfRubric]
+        rubricHeaderRangeValues[_RowTag - 1][currentCol]
           = rubric.gradeTag;
-        rubricHeaderRangeValues[_RowHeading - 1][lastColumnOfRubric]
+        rubricHeaderRangeValues[_RowHeading - 1][currentCol]
           = "Grade";
-        rubricHeaderRangeValues[_RowCriteriaActive - 1][lastColumnOfRubric]
+        rubricHeaderRangeValues[_RowCriteriaActive - 1][currentCol]
           = true;
-        FormatRubricSingleHeader(gradingOverviewSheet, startColumn, rubric);
+
+
+        currentCol += 2;
       });
 
       // -- Comment header
-      const commentColNum = highestCriteriaColId + 2;
-      rubricHeaderRangeValues[_RowHeading - 1][commentColNum] = "Comment";
-      rubricHeaderRangeValues[_RowTag - 1][commentColNum] = "comment";
+      const commentColNum = currentCol;
+      rubricHeaderRangeValues[_RowHeading - 1][currentCol] = "Comment";
+      rubricHeaderRangeValues[_RowTag - 1][currentCol] = "comment";
+
+      currentCol += 2;
 
       // -- Response doc header
-      const responseDocColNum = highestCriteriaColId + 4
+      const responseDocColNum = currentCol
       rubricHeaderRangeValues[_RowHeading - 1][responseDocColNum] = "RESPONSE";
       rubricHeaderRangeValues[_RowTag - 1][responseDocColNum] = "responsedoc";
 
@@ -206,30 +231,30 @@ export namespace PageGradingOverview {
       gradingOverviewSheet.setColumnWidth(startColumn + responseDocColNum, 200);
     }
 
-    function FormatRubricSingleHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, rubric: LibRubrics.Rubric) {
+    function FormatRubricSingleHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, rubricColumn: number, rubric: LibRubrics.Rubric) {
       // -- Rubric titles visuals
       let rubricTitleRange = gradingOverviewSheet.getRange(
-        _RowRubricTitle, startColumn + rubric.columnNumber - 1,
+        _RowRubricTitle, rubricColumn,
         1, rubric.criteria.length + 1);
       rubricTitleRange.merge();
       rubricTitleRange.setFontWeight("bold");
 
       // -- Criteria active checkboxes
       let criteriaCheckboxRange = gradingOverviewSheet.getRange(
-        _RowCriteriaActive, startColumn + rubric.columnNumber - 1,
+        _RowCriteriaActive, rubricColumn,
         1, rubric.criteria.length + 1);
       criteriaCheckboxRange.insertCheckboxes();
 
       // -- Column widths
       gradingOverviewSheet.setColumnWidths(
-        startColumn + rubric.columnNumber, rubric.criteria.length, 100
+        rubricColumn, rubric.criteria.length, 100
       );
       gradingOverviewSheet.setColumnWidth(
-        startColumn + rubric.columnNumber + rubric.criteria.length, 20
+        rubricColumn + 1 + rubric.criteria.length, 20
       );
     }
 
-    function FormatHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet, startColumn: number, highestCriteriaColId: number) {
+    function FormatHeader(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
       let lastCol = gradingOverviewSheet.getLastColumn();
       let headingRange = gradingOverviewSheet.getRange(
         _RowHeading, 1, 1,
@@ -425,15 +450,13 @@ export namespace PageGradingOverview {
       });
 
       // Find column of rubric's overall grade
-      const gradeCol = rubric.criteria.reduce(
-        (prev, current) => {
-          return prev.columnNumber > current.columnNumber ? prev : current
-        }
-      ).columnNumber;
-
-      // Save rubric grade
-      rubric.studentGrade = studentDataValues[0][gradeCol];
-
+      const gradeCol = tagColNumbers.get(rubric.gradeTag)
+      if (gradeCol === undefined) {
+        Browser.msgBox(`No grade column found for rubric "${rubric.name}"`);
+      } else {
+        // Save rubric grade
+        rubric.studentGrade = studentDataValues[0][gradeCol];
+      }
     });
 
     // Get comment

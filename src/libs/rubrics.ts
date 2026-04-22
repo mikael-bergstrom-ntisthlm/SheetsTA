@@ -19,7 +19,6 @@ export namespace LibRubrics {
     studentGrade?: string;
     gradeTag: string;
     criteria: Criteria[];
-    columnNumber: number;
   }
 
   export interface Criteria {
@@ -28,6 +27,6 @@ export namespace LibRubrics {
     active: boolean;
     grade: string;
     studentPassed?: boolean;
-    columnNumber: number;
+    // columnNumber: number;
   }
 } 
