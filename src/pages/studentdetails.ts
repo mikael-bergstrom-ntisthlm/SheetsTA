@@ -1,5 +1,7 @@
 import { LibRubrics } from "../libs/rubrics.js";
+import { LibGSheets } from "../libs/sheets.js";
 import { LibStudents } from "../libs/students.js";
+import { PageRubrics } from "./rubrics.js";
 
 export namespace PageStudentDetails {
 
@@ -197,18 +199,17 @@ export namespace PageStudentDetails {
     setup: SheetSetup
   ) {
     // Count number of criteria
-    const totalHeight = 
+    const totalHeight =
       LibRubrics.CountCriteria(rubrics)
       + rubrics.length * (setup.GradeForEachRubric ? 2 : 1);
-           // Add (maybe) 1 for the grade and 1 for spacing, for each rubric
+    // Add (maybe) 1 for the grade and 1 for spacing, for each rubric
 
     // Create filter range
     let filterRange = dataRange.offset(-1, 0, totalHeight);
     let filter = filterRange.createFilter();
-    
+
     // Hide inactive criteria, maybe
-    if (setup.ColActive > 0)
-    {
+    if (setup.ColActive > 0) {
       const criteria = SpreadsheetApp.newFilterCriteria().setHiddenValues(["FALSE"]);
       filter.setColumnFilterCriteria(setup.ColActive, criteria);
     }
@@ -225,6 +226,160 @@ export namespace PageStudentDetails {
       setup.ColTag
     );
   }
+
+  /* ---------------------------------------------------------------------------
+    TRANSFERRING DATA
+  ----------------------------------------------------------------------------*/
+  //#region Transferring
+
+
+
+
+  /**
+   * Insert Student data from some other source, using criteria tags to match
+   * with student detail sheet rows
+   * @param student The student data to insert
+   * @param studentGradingSheet The sheet to insert it into
+   */
+  export function InsertStudentDataRubrics(
+    student: LibStudents.StudentData,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    setup: SheetSetup
+  ): void {
+
+    if (!student.gradingData) {
+      Browser.msgBox("Student has no data!");
+      return;
+    }
+
+    const localData = GetRubricsData(studentGradingSheet, setup);
+
+    // Setup quick index of tags and row numbers for easy lookup
+    const tagRowNumbers = new Map<string, number>();
+
+    localData.values.forEach((row, rowNum) => {
+      tagRowNumbers.set("" + row[setup.ColTag - 1], rowNum);
+    });
+
+    // Go through the rubrics, get grades from local data
+    student.gradingData.rubrics.forEach(rubric => {
+      rubric.criteria.forEach(criterion => {
+
+        // Find the row with the corresponding tag
+        const rowNum = tagRowNumbers.get(criterion.tag);
+        if (rowNum === undefined) {
+          Browser.msgBox(`No row found for criterion '${criterion.name}'`);
+          return;
+        }
+
+        // Set the row's checkmark status
+        localData.values[rowNum][setup.ColCheckmark - 1] =
+          criterion.studentPassed ? "✔" : "✘";
+      });
+
+      // Set the grade
+      if (setup.GradeForEachRubric) {
+        const rowNum = tagRowNumbers.get(rubric.gradeTag);
+        if (rowNum === undefined) return;
+        localData.values[rowNum][setup.ColCheckmark - 1] = rubric.studentGrade;
+      }
+    });
+
+    // Set the comment
+    if (setup.CommentFooter) {
+      const rowNum = tagRowNumbers.get("comment");
+      if (rowNum) {
+        localData.values[rowNum][setup.ColCheckmark - 1] = student.gradingData.comment;
+      }
+    }
+
+
+    // Insert the data
+    localData.range.setValues(
+      localData.values
+    )
+  }
+
+  export function GetStudentGradingData(
+    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    setup: SheetSetup
+  ): LibStudents.GradingData {
+
+    // Get rubrics from rubrics page
+    const data: LibStudents.GradingData = {
+      rubrics: PageRubrics.GetRubrics(rubricsSheet),
+      comment: ""
+    }
+
+    if (data.rubrics.length == 0) { Browser.msgBox("No rubrics found") }
+
+    // Get the local values
+    const localData = GetRubricsData(studentGradingSheet, setup);
+
+    // Setup quick index of tags and row numbers for easy lookup
+    const tagRowNumbers = new Map<string, number>();
+
+    localData.values.forEach((row, rowNum) => {
+      tagRowNumbers.set("" + row[setup.ColTag - 1], rowNum);
+    });
+
+    // Go through the rubrics, set grades from local data
+    data.rubrics.forEach(rubric => {
+      rubric.criteria.forEach(criterion => {
+
+        // Find the row with the corresponding tag
+        const rowNum = tagRowNumbers.get(criterion.tag);
+        if (rowNum === undefined) {
+          Browser.msgBox(`No row found for criterion '${criterion.name}'`);
+          return
+        };
+
+        // Set passed/not passed
+        criterion.studentPassed =
+          localData.values[rowNum][setup.ColCheckmark - 1] == "✔" ? true : false;
+      });
+
+      // Set the grade
+      const rowNum = tagRowNumbers.get(rubric.gradeTag);
+      if (rowNum === undefined) return;
+      rubric.studentGrade = localData.values[rowNum][setup.ColCheckmark - 1];
+    });
+
+    // -- Get the comment
+    const rowNum = tagRowNumbers.get("comment");
+    if (rowNum) {
+      data.comment = localData.values[rowNum][setup.ColCheckmark - 1];
+    }
+
+    // Return the data
+    return data;
+  }
+
+
+  /**
+   * Get the entire rubrics block (range+values) of a student grading sheet
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} studentGradingSheet - The student grading sheet
+   * @returns {RangeValuePair} A value-range pair
+   */
+  function GetRubricsData(
+    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    setup: SheetSetup
+  ): LibGSheets.RangeValuePair {
+
+    const gradingDataRange = studentGradingSheet
+      .getRange(setup.RowHeaderHeight + 1, 1, // Start at the row below the header
+        studentGradingSheet.getLastRow() - setup.RowHeaderHeight, // Get all the rows, minus the header
+        GetHighestColumnNumber(setup)
+      ); // Find the rightmost column
+
+    return {
+      values: gradingDataRange.getValues(),
+      range: gradingDataRange
+    };
+  }
+
+  //#endregion
 
   /* ---------------------------------------------------------------------------
     INTERFACES

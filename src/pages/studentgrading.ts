@@ -12,14 +12,21 @@ export namespace PageStudentGrading {
   const _ColName: number = 2;
   const _RowName: number = 1;
 
-  const _ColRubric: number = 1;
-  const _ColCriteria: number = 2;
-  const _ColTag: number = 3;
-  const _ColCheckmark: number = 4;
-  const _ColGrade: number = 5;
-  const _ColActive: number = 6;
+  // -- CONFIG
+  export const setup: PageStudentDetails.SheetSetup = {
+    ColRubric: 1,
+    ColCriteria: 2,
+    ColTag: 3,
+    ColCheckmark: 4,
+    ColGrade: 5,
+    ColActive: 6,
+    RowHeaderHeight: 3,
+    RowHeaderName: 1,
+    RowHeaderComment: -1,
 
-  const _RowHeader: number = 3;
+    CommentFooter: true,
+    GradeForEachRubric: true
+  }
 
 
   export namespace Setup {
@@ -33,21 +40,7 @@ export namespace PageStudentGrading {
     ) {
 
       // TODO: Decide wtf to do here – global config or config object?
-      // -- CONFIG
-      const setup: PageStudentDetails.SheetSetup = {
-        ColRubric: _ColRubric,
-        ColCriteria: _ColCriteria,
-        ColTag: _ColTag,
-        ColCheckmark: _ColCheckmark,
-        ColGrade: _ColGrade,
-        ColActive: _ColActive,
-        RowHeaderHeight: _RowHeader,
-        RowHeaderName: 1,
-        RowHeaderComment: -1,
 
-        CommentFooter: true,
-        GradeForEachRubric: true
-      }
 
       // -- PREP
       const studentGradingSheet = LibGSheets.CreateOrGetSheet(
@@ -86,12 +79,12 @@ export namespace PageStudentGrading {
 
       // -- SET WIDTHS
       studentGradingSheet
-        .setColumnWidth(_ColRubric, 223)
-        .setColumnWidth(_ColCriteria, 275)
-        .setColumnWidth(_ColGrade, 70)
-        .setColumnWidth(_ColActive, 70)
+        .setColumnWidth(setup.ColRubric, 223)
+        .setColumnWidth(setup.ColCriteria, 275)
+        .setColumnWidth(setup.ColGrade, 70)
+        .setColumnWidth(setup.ColActive, 70)
       studentGradingSheet
-        .hideColumns(_ColTag);
+        .hideColumns(setup.ColTag);
 
     }
 
@@ -126,146 +119,6 @@ export namespace PageStudentGrading {
     return pair[1].trim();
   }
 
-  /* ---------------------------------------------------------------------------
-    TRANSFERRING DATA
-  ----------------------------------------------------------------------------*/
-  //#region Transferring
-
-  /**
-   * Insert Student data from some other source, using criteria tags to match
-   * with student grading sheet rows
-   * @param student The student data to insert
-   * @param studentGradingSheet The sheet to insert it into
-   */
-  export function InsertStudentDataRubrics(
-    student: LibStudents.StudentData,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ): void {
-
-    if (!student.gradingData) {
-      Browser.msgBox("Student has no data!");
-      return;
-    }
-
-    const localData = GetRubricsData(studentGradingSheet);
-
-    // Setup quick index of tags and row numbers for easy lookup
-    const tagRowNumbers = new Map<string, number>();
-
-    localData.values.forEach((row, rowNum) => {
-      tagRowNumbers.set("" + row[_ColTag - 1], rowNum);
-    });
-
-    // Go through the rubrics, get grades from local data
-    student.gradingData.rubrics.forEach(rubric => {
-      rubric.criteria.forEach(criterion => {
-
-        // Find the row with the corresponding tag
-        const rowNum = tagRowNumbers.get(criterion.tag);
-        if (rowNum === undefined) {
-          Browser.msgBox(`No row found for criterion '${criterion.name}'`);
-          return;
-        }
-
-        // Set the row's checkmark status
-        localData.values[rowNum][_ColCheckmark - 1] =
-          criterion.studentPassed ? "✔" : "✘";
-      });
-
-      // Set the grade
-      const rowNum = tagRowNumbers.get(rubric.gradeTag);
-      if (rowNum === undefined) return;
-      localData.values[rowNum][_ColCheckmark - 1] = rubric.studentGrade;
-    });
-
-    // Set the comment
-    const rowNum = tagRowNumbers.get("comment");
-    if (rowNum) {
-      localData.values[rowNum][_ColCheckmark - 1] = student.gradingData.comment;
-    }
-
-    
-    // Insert the data
-    localData.range.setValues(
-      localData.values
-    )
-  }
-
-
-  export function GetStudentGradingData(
-    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ): LibStudents.GradingData {
-
-    // Get rubrics from rubrics page
-    const data: LibStudents.GradingData = {
-      rubrics: PageRubrics.GetRubrics(rubricsSheet),
-      comment: ""
-    }
-
-    if (data.rubrics.length == 0) { Browser.msgBox("No rubrics found") }
-
-    // Get the local values
-    const localData = GetRubricsData(studentGradingSheet);
-
-    // Setup quick index of tags and row numbers for easy lookup
-    const tagRowNumbers = new Map<string, number>();
-
-    localData.values.forEach((row, rowNum) => {
-      tagRowNumbers.set("" + row[_ColTag - 1], rowNum);
-    });
-
-    // Go through the rubrics, set grades from local data
-    data.rubrics.forEach(rubric => {
-      rubric.criteria.forEach(criterion => {
-
-        // Find the row with the corresponding tag
-        const rowNum = tagRowNumbers.get(criterion.tag);
-        if (rowNum === undefined) {
-          Browser.msgBox(`No row found for criterion '${criterion.name}'`);
-          return
-        };
-
-        // Set passed/not passed
-        criterion.studentPassed =
-          localData.values[rowNum][_ColCheckmark - 1] == "✔" ? true : false;
-      });
-
-      // Set the grade
-      const rowNum = tagRowNumbers.get(rubric.gradeTag);
-      if (rowNum === undefined) return;
-      rubric.studentGrade = localData.values[rowNum][_ColCheckmark - 1];
-    });
-
-    // -- Get the comment
-    const rowNum = tagRowNumbers.get("comment");
-    if (rowNum) {
-      data.comment = localData.values[rowNum][_ColCheckmark - 1];
-    }
-
-    // Return the data
-    return data;
-  }
-
-  /**
-   * Get the entire rubrics block (range+values) of a student grading sheet
-   * @param {GoogleAppsScript.Spreadsheet.Sheet} studentGradingSheet - The student grading sheet
-   * @returns {RangeValuePair} A value-range pair
-   */
-  function GetRubricsData(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): LibGSheets.RangeValuePair {
-
-    const gradingDataRange = studentGradingSheet
-      .getRange(_RowHeader + 1, 1, // Start at the row below the header
-        studentGradingSheet.getLastRow() - _RowHeader, // Get all the rows, minus the header
-        Math.max(_ColActive, _ColCheckmark, _ColCriteria, _ColGrade, _ColRubric)); // Find the rightmost column
-
-    return {
-      values: gradingDataRange.getValues(),
-      range: gradingDataRange
-    };
-  }
-
-  //#endregion
 
   /* ---------------------------------------------------------------------------
     CLEARING & RESETTING
@@ -278,9 +131,9 @@ export namespace PageStudentGrading {
    */
   export function ClearGrading(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet) {
     const checkmarkRange = studentGradingSheet.getRange(
-      _RowHeader + 1,
-      _ColCheckmark,
-      studentGradingSheet.getMaxRows() - _RowHeader + 1
+      setup.RowHeaderHeight + 1,
+      setup.ColCheckmark,
+      studentGradingSheet.getMaxRows() - setup.RowHeaderHeight + 1
     )
 
     const checkmarkValues = checkmarkRange.getValues().map(row => {

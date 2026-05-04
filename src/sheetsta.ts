@@ -13,6 +13,7 @@ import { PageStudentGrading } from "./pages/studentgrading.js";
 import { PageGradingOverview } from "./pages/gradingoverview.js";
 import { PageRubrics } from "./pages/rubrics.js";
 import { PageResponse } from "./pages/response.js";
+import { PageStudentDetails } from "./pages/studentdetails.js";
 
 function Setup() {
   let ui = SpreadsheetApp.getUi();
@@ -247,9 +248,10 @@ function TransferFromStudentGradingToOverview() {
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
   if (userId === "") return;
 
-  const rubrics = PageStudentGrading.GetStudentGradingData(
+  const rubrics = PageStudentDetails.GetStudentGradingData(
     rubricsSheet,
-    studentGradingSheet
+    studentGradingSheet,
+    PageStudentGrading.setup
   )
 
   PageGradingOverview.InsertRubricData(userId, rubrics, gradingOverviewSheet);
@@ -273,7 +275,11 @@ function TransferFromOverviewToStudentGrading() {
   );
   if (!student) return;
 
-  PageStudentGrading.InsertStudentDataRubrics(student, studentGradingSheet)
+  PageStudentDetails.InsertStudentDataRubrics(
+    student,
+    studentGradingSheet,
+    PageStudentGrading.setup
+  );
 }
 
 //#endregion

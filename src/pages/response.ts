@@ -7,26 +7,28 @@ export namespace PageResponse {
 
   const _ResponseTemplateSheetName = "_TEMPLATERESPONSE";
 
+  // -- CONFIG
+  export const setup: PageStudentDetails.SheetSetup = {
+    ColRubric: 1,
+    ColCriteria: 2,
+    ColTag: 3,
+    ColCheckmark: 4,
+    ColGrade: -1,
+    ColActive: 5,
+    RowHeaderHeight: 4,
+    RowHeaderName: 1,
+    RowHeaderComment: 2,
+
+    CommentFooter: false,
+    GradeForEachRubric: false,
+  }
+
   // TODO: CURRENT PROJECT
   export function Setup(
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
   ) {
 
-    // -- CONFIG
-    const setup: PageStudentDetails.SheetSetup = {
-      ColRubric: 1,
-      ColCriteria: 2,
-      ColTag: 3,
-      ColCheckmark: 4,
-      ColGrade: -1,
-      ColActive: 5,
-      RowHeaderHeight: 4,
-      RowHeaderName: 1,
-      RowHeaderComment: 2,
 
-      CommentFooter: false,
-      GradeForEachRubric: false,
-    }
 
     // -- PREP
     const responseTemplate = LibGSheets.CreateOrGetSheet(
