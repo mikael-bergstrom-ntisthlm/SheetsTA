@@ -25,6 +25,8 @@ export namespace PageGradingOverview {
   const _RowHeading = 5;
   const _RowDataStart = 6;
 
+  const _ResponseDocTag = "responsedoc";
+
   export function GetDefaultGradingOverviewSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
     GoogleAppsScript.Spreadsheet.Sheet | null {
 
@@ -101,7 +103,7 @@ export namespace PageGradingOverview {
       let rubricHeaderRangeValues = rubricHeaderRange.getValues();
 
       // -- Make a map of which column belongs to which tag
-      const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet, startColumn);
+      const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
       // -- Go through all rubrics, insert checkmarks & grades
       rubrics.forEach(rubric => {
@@ -220,7 +222,7 @@ export namespace PageGradingOverview {
       // -- Response doc header
       const responseDocColNum = currentCol
       rubricHeaderRangeValues[_RowHeading - 1][responseDocColNum] = "RESPONSE";
-      rubricHeaderRangeValues[_RowTag - 1][responseDocColNum] = "responsedoc";
+      rubricHeaderRangeValues[_RowTag - 1][responseDocColNum] = _ResponseDocTag;
 
       // -- Insert values into range
       rubricHeaderRange.setValues(rubricHeaderRangeValues);
@@ -288,17 +290,26 @@ export namespace PageGradingOverview {
    * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet - The spreadsheet whose overview to get students from
    * @returns {StudentData[]} an array of student data
    */
-  export function GetStudentsData(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function GetAllStudentsData(
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ): LibStudents.StudentData[] {
 
-    const studentValues = gradingOverviewSheet.getRange(
+    const studentsRange = gradingOverviewSheet.getRange(
       _RowDataStart, 1,
       gradingOverviewSheet.getLastRow() - _RowDataStart + 1,
       gradingOverviewSheet.getFrozenColumns()
-    ).getValues()
+    )
+
+    return GetStudentsDataFromValues(studentsRange.getValues());
+  }
+
+  export function GetStudentsDataFromValues(
+    sourceValues: any[][]
+  ): LibStudents.StudentData[] {
 
     const studentsData: LibStudents.StudentData[] = [];
 
-    studentValues.forEach(row => {
+    sourceValues.forEach(row => {
       // Skip empties
       if (row[_ColUserId - 1].length === 0) return;
 
@@ -330,7 +341,7 @@ export namespace PageGradingOverview {
     const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
 
     // -- Find the right student
-    const studentsData = GetStudentsData(gradingOverviewSheet);
+    const studentsData = GetAllStudentsData(gradingOverviewSheet);
 
     let studentRowNum = studentsData.findIndex(student => student.id === userID);
     if (studentRowNum < 0) { Browser.msgBox("Student ID not found"); return null; };
@@ -352,19 +363,22 @@ export namespace PageGradingOverview {
       }
     }
 
+
     // -- Make a map of which column belongs to which tag
-    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet, colDataStart);
+    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
     // -- Go through all rubrics, insert checkmarks & grades
     data.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
         // Find the column with a matching tag
-        const colNumber = tagColNumbers.get(criterion.tag);
+        let colNumber = tagColNumbers.get(criterion.tag);
         if (colNumber === undefined) {
           Browser.msgBox(`No column found for criterion '${criterion.name}'`);
           return;
         }
+
+        colNumber -= (colDataStart - 1);
 
         studentData.values[0][colNumber] = criterion.studentPassed ? "✔" : "✘";
       });
@@ -375,11 +389,12 @@ export namespace PageGradingOverview {
       studentData.values[0][colNumber] = rubric.studentGrade;
     });
 
-    const colNumber = tagColNumbers.get("comment"); // TODO: This tag is bad b/c someone might use it accidentally
+    let colNumber = tagColNumbers.get("comment"); // TODO: This tag is bad b/c someone might use it accidentally
     if (colNumber === undefined) {
       Browser.msgBox("No column found for comment");
     }
     else {
+      colNumber -= (colDataStart - 1);
       studentData.values[0][colNumber] = data.comment;
     }
 
@@ -398,16 +413,13 @@ export namespace PageGradingOverview {
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet): LibStudents.StudentData | null {
 
-    // TODO: Make this more precise
-    const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
-
     // -- Make a map of which column belongs to which tag
-    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet, colDataStart);
+    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
     // -- Get the student data values
 
     // Find the right student
-    const studentsData = GetStudentsData(gradingOverviewSheet);
+    const studentsData = GetAllStudentsData(gradingOverviewSheet);
 
     let studentRowNum = studentsData.findIndex(student => student.id === userID);
     if (studentRowNum < 0) { Browser.msgBox("Student ID not found"); return null; };
@@ -417,10 +429,10 @@ export namespace PageGradingOverview {
     // Get the student's data
     const studentDataValues = gradingOverviewSheet.getRange(
       _RowDataStart + studentRowNum, // Student's row
-      colDataStart,
+      1,
       1, // only one row
-      gradingOverviewSheet.getMaxColumns() - colDataStart
-    ).getValues();
+      gradingOverviewSheet.getMaxColumns()
+    ).getValues()[0].map(v => String(v));
 
     // -- Get the rubrics from the rubrics sheet
     student.gradingData = {
@@ -428,11 +440,27 @@ export namespace PageGradingOverview {
       comment: ""
     }
 
-    // Get the tags-row from the overview sheet
-    const tagsValues = gradingOverviewSheet.getRange(
-      _RowTag, colDataStart,
-      1, gradingOverviewSheet.getMaxColumns() - colDataStart
-    ).getValues();
+    InsertRowDataIntoStudent(student, tagColNumbers, studentDataValues);
+
+    return student;
+  }
+
+  /**
+   * Takes a set of row-data and inserts it into a Student object, using a tag
+   * map to determine which of the row's columns maps to which criterion
+   * @param student {LibStudents.StudentData}
+   * @param tagColNumbers {Map<string, number>}
+   * @param studentDataValues {any[][]}
+   */
+  function InsertRowDataIntoStudent(
+    student: LibStudents.StudentData,
+    tagColNumbers: Map<string, number>,
+    studentDataValues: string[]
+  ): void {
+
+    if (student.gradingData === undefined) {
+      return;
+    }
 
     // Go through the rubrics
     student.gradingData.rubrics.forEach(rubric => {
@@ -446,16 +474,16 @@ export namespace PageGradingOverview {
         }
 
         criterion.studentPassed =
-          studentDataValues[0][colNumber] == "✔";
+          studentDataValues[colNumber] == "✔";
       });
 
       // Find column of rubric's overall grade
-      const gradeCol = tagColNumbers.get(rubric.gradeTag)
+      const gradeCol = tagColNumbers.get(rubric.gradeTag);
       if (gradeCol === undefined) {
         Browser.msgBox(`No grade column found for rubric "${rubric.name}"`);
       } else {
         // Save rubric grade
-        rubric.studentGrade = studentDataValues[0][gradeCol];
+        rubric.studentGrade = studentDataValues[gradeCol];
       }
     });
 
@@ -465,10 +493,157 @@ export namespace PageGradingOverview {
       Browser.msgBox("No column found for comment");
     }
     else {
-      student.gradingData.comment = studentDataValues[0][colNumber];
+      student.gradingData.comment = studentDataValues[colNumber];
+    }
+  }
+
+  // TODO: Determine if this is relevant
+  export function GetSelectedStudent(
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ) {
+    const studentDataValues = gradingOverviewSheet.getRange(
+      gradingOverviewSheet.getCurrentCell()?.getRow() ?? 0,
+      1,
+      1,
+      gradingOverviewSheet.getMaxColumns()
+    ).getValues()[0].map(v => String(v));
+
+    // -- Make a map of which column belongs to which tag
+    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
+
+    // -- Make base student object
+    const student: LibStudents.StudentData = {
+      id: studentDataValues[_ColUserId - 1],
+      name: studentDataValues[_ColName - 1],
+      surname: studentDataValues[_ColSurname - 1],
+      email: studentDataValues[_ColEmail - 1],
+      gradingData: { // Wi
+        rubrics: [],
+        comment: ""
+      }
     }
 
-    return student;
+    Browser.msgBox(student.name);
+
+    InsertRowDataIntoStudent(student, tagColNumbers, studentDataValues)
+
+    // Get current selection
+    // Get current row
+    // Create student object, return it
+  }
+
+  //#endregion
+
+  /* -----------------------------------------------------------------------------
+    RESPONSE DOCUMENT GENERATION
+  ------------------------------------------------------------------------------*/
+  //#region response doc gen
+
+  export function GenerateResponseDocuments(
+    rowBlocks: GoogleAppsScript.Spreadsheet.Range[],
+    targetFolder: GoogleAppsScript.Drive.Folder,
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ) {
+
+    // -- Make a map of which column belongs to which tag
+    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
+
+    const responseColNum = tagColNumbers.get(_ResponseDocTag);
+    if (responseColNum === undefined) {
+      Browser.msgBox(`No response document column found! \\nNeeds to have the tag ${_ResponseDocTag}`);
+      return;
+    }
+
+    rowBlocks.forEach(rowBlock => {
+      const rowBlockValues = rowBlock.getValues();
+      const students = GetStudentsDataFromValues(rowBlockValues);
+
+      for (let i = 0; i < students.length; i++) {
+
+        const student = students[i];
+
+        let responseDocUrl: string = rowBlockValues[i][responseColNum];
+
+        let studentResponseSpreadsheet =
+          GetOrCreateStudentResponseSpreadsheet(student, responseDocUrl, targetFolder);
+
+        if (studentResponseSpreadsheet === undefined) return;
+
+        const newUrl = studentResponseSpreadsheet.getUrl();
+        if (newUrl !== responseDocUrl) {
+          let responseBlock = rowBlock.offset(
+            i,
+            responseColNum,
+            1, 1
+          );
+
+          responseBlock.setValue(newUrl)
+        }
+      }
+
+    });
+
+
+
+    // For each range...
+    //    for each 
+
+
+    // Is the rowid/s a good data transfer method? "Get the students of these row ids"?
+    //   Start-row, num-rows so we get contiguous blocks for efficiency
+    //   Maybe make a method that's like "here have a row(array-values), make a Student object without rubrics"?
+    //    Could also be used by others
+
+    // So: loop through actual rows, make a student for each, create documents, 
+
+    // Find student and get its data (We only really need the basics, like name and id right?)
+    // Check if there's already a response doc
+    // Create response document w/ student's name as file name
+    //  Add it to folder
+    //   (Check if folder exists, otherwise create it)
+    // Set response column's value to document's url
+
+    // next step: 
+    //  Generate template sheet (which auto-gets values)
+    //  Copy template sheet to response doc
+    //  Insert student's ID into template sheet
+
+    // After that:
+    //  Make this work for multiple students
+
+  }
+
+  function GetOrCreateStudentResponseSpreadsheet(
+    student: LibStudents.StudentData,
+    responseDocUrl: string,
+    targetFolder: GoogleAppsScript.Drive.Folder
+  ): GoogleAppsScript.Spreadsheet.Spreadsheet | undefined {
+
+    const responseSpreadsheetName = `Response ${student.surname} ${student.name}`;
+
+    let studentResponseSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
+
+    if (responseDocUrl !== "") {
+      try {
+        studentResponseSpreadsheet = SpreadsheetApp.openByUrl(responseDocUrl);
+        Browser.msgBox("Opened successfully");
+      }
+      catch {
+        const overwrite = Browser.msgBox(`Student "${student.name} ${student.surname} has something in the response doc column, but it doesn't seem to be the url of a Spreadsheet document\\nDo you want to overwrite this content?"`, Browser.Buttons.YES_NO);
+        if (overwrite === "no") return undefined;
+        studentResponseSpreadsheet = SpreadsheetApp.create(responseSpreadsheetName);
+      }
+    }
+    else {
+      studentResponseSpreadsheet = SpreadsheetApp.create(responseSpreadsheetName);
+    }
+
+    // -- Set folder
+    const file = DriveApp.getFileById(studentResponseSpreadsheet.getId());
+    file.moveTo(targetFolder);
+
+    return studentResponseSpreadsheet;
   }
 
   //#endregion
@@ -488,7 +663,7 @@ export namespace PageGradingOverview {
       _RowDataStart + offset,
       colDataStart,
       1, // only one row
-      gradingOverviewSheet.getMaxColumns() - colDataStart
+      gradingOverviewSheet.getMaxColumns() - (colDataStart - 1)
     );
 
     return {
@@ -506,22 +681,23 @@ export namespace PageGradingOverview {
    * @returns {Map<string, number>} The finished map
    */
   function MakeTagColNumberMap(
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    colDataStart: number
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
   ): Map<string, number> {
 
     // Get the tags-row from the overview sheet
     const tagsValues = gradingOverviewSheet.getRange(
       _RowTag,
-      colDataStart,
+      1,
       1, // only one row
-      gradingOverviewSheet.getMaxColumns() - colDataStart
+      gradingOverviewSheet.getMaxColumns()
     ).getValues();
 
     const tagColNumbers = new Map<string, number>();
 
     tagsValues[0].forEach((col, colNum) => {
-      tagColNumbers.set("" + col, colNum);
+      if (col) {
+        tagColNumbers.set("" + col, colNum);
+      }
     });
 
     return tagColNumbers;

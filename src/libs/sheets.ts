@@ -139,6 +139,33 @@ export namespace LibGSheets {
       .getMergedRanges().forEach(mergedRange => mergedRange.breakApart());
   }
 
+  /**
+   * Get an array of Ranges that cover the same rows as the currently selected
+   * cells/blocks of cells, but which run from column 1 to the end of the sheet.
+   * @param sheet {GoogleAppsScript.Spreadsheet.Sheet}
+   * @returns {GoogleAppsScript.Spreadsheet.Range[]}
+   */
+  export function GetFullWidthBlocksOfSelection(
+    sheet: GoogleAppsScript.Spreadsheet.Sheet
+  ): GoogleAppsScript.Spreadsheet.Range[] {
+
+    const selectedRanges = sheet.getSelection().getActiveRangeList();
+    if (!selectedRanges) return [];
+
+    const fullWidthRanges: GoogleAppsScript.Spreadsheet.Range[] = [];
+
+    selectedRanges.getRanges().forEach(selectedRange => {
+      const fullWidthRange = selectedRange.offset(0,
+        -(selectedRange.getColumn() - 1),
+        selectedRange.getHeight(),
+        sheet.getMaxColumns()
+      );
+      fullWidthRanges.push(fullWidthRange);
+    });
+
+    return fullWidthRanges;
+  }
+
   // TODO: Check how much this is actually used; doesn't feel very readable
   /**
    * Go through the currently selected range, run all rows through the given

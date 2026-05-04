@@ -12,6 +12,7 @@ import { PageSubmissions } from "./pages/submissions.js";
 import { PageStudentGrading } from "./pages/studentgrading.js";
 import { PageGradingOverview } from "./pages/gradingoverview.js";
 import { PageRubrics } from "./pages/rubrics.js";
+import { PageResponse } from "./pages/response.js";
 
 function Setup() {
   let ui = SpreadsheetApp.getUi();
@@ -55,6 +56,7 @@ function Setup() {
         .addItem("Transfer from master grading sheet", `${prefix}TransferFromOverviewToStudentGrading`)
     ).addSubMenu(
       SpreadsheetApp.getUi().createMenu("Grading responses")
+        .addItem("Setup response document template", `${prefix}SetupResponseTemplate`)
         .addItem("Generate/Update response for student", `${prefix}GenerateResponseDocForStudent`)
     )
     .addSubMenu(
@@ -281,12 +283,27 @@ function TransferFromOverviewToStudentGrading() {
 ------------------------------------------------------------------------------*/
 //#region Response docs
 
+function SetupResponseTemplate() {
+  PageResponse.Setup(SpreadsheetApp.getActive());
+}
+
 function GenerateResponseDocForStudent() {
-  const spreadsheet = SpreadsheetApp.getActive();
+  const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
+  const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
+  const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
+  if (!gradingOverviewSheet || !rubricsSheet) return;
 
-  const config = PageMasterConfig.GetMasterConfig(spreadsheet);
+  // PageGradingOverview.GetSelectedStudent(gradingOverviewSheet, rubricsSheet);
+  const rowBlocks = LibGSheets.GetFullWidthBlocksOfSelection(gradingOverviewSheet);
 
+  const targetFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
 
+  PageGradingOverview.GenerateResponseDocuments(rowBlocks, targetFolder, gradingOverviewSheet)
+
+  // ResponsePage.GenerateResponseDocument(
+  //   gradingOverviewSheet,
+  //   "105003234631509491556"
+  // )
 }
 //#endregion
 

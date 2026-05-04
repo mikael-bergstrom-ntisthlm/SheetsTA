@@ -6,7 +6,6 @@ export namespace PageRoster {
 
   const rosterSheetName = "_ROSTER";
 
-  
   /**
    * Add or update a sheet with roster information of one or more classrooms as defined in a config
    * @param {LibConfig.Config} config - The config to get roster info from
