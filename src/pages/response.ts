@@ -6,6 +6,7 @@ import { PageStudentDetails } from "./studentdetails.js";
 export namespace PageResponse {
 
   const _ResponseTemplateSheetName = "_TEMPLATERESPONSE";
+  const _ResponseSheetDetailsName = "DETAILS";
 
   // -- CONFIG
   export const setup: PageStudentDetails.SheetSetup = {
@@ -23,12 +24,9 @@ export namespace PageResponse {
     GradeForEachRubric: false,
   }
 
-  // TODO: CURRENT PROJECT
   export function Setup(
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
   ) {
-
-
 
     // -- PREP
     const responseTemplate = LibGSheets.CreateOrGetSheet(
@@ -76,6 +74,30 @@ export namespace PageResponse {
     }
   }
 
+  export function GetDefaultResponseTemplateSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
+    GoogleAppsScript.Spreadsheet.Sheet | null {
+
+    return spreadsheet.getSheetByName(_ResponseTemplateSheetName);
+  }
+
+
+  export function GetOrCreateDetailsSheet(
+    studentResponseSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
+    responseTemplateSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ) {
+    let detailsSheet = studentResponseSpreadsheet.getSheetByName(_ResponseSheetDetailsName);
+    if (detailsSheet === null) {
+      detailsSheet = responseTemplateSheet.copyTo(studentResponseSpreadsheet);
+      detailsSheet.setName(_ResponseSheetDetailsName);
+    }
+    studentResponseSpreadsheet.setActiveSheet(detailsSheet);
+    studentResponseSpreadsheet.moveActiveSheet(1);
+
+    return detailsSheet;
+  }
+
+
+  // TODO: Keep or throw away?
   export function GenerateResponseDocument(
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
     userId: string

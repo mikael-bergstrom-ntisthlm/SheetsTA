@@ -3,6 +3,7 @@ import { LibConfig } from "../libs/config.js";
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js";
 import { LibStudents } from "../libs/students.js";
+import { PageResponse } from "./response.js";
 import { PageRubrics } from "./rubrics.js";
 
 export namespace PageGradingOverview {
@@ -337,10 +338,17 @@ export namespace PageGradingOverview {
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
 
-    // TODO: Make this more precise
-    const colDataStart = gradingOverviewSheet.getFrozenColumns() + 1;
+    // -- PREPARE
 
-    // -- Find the right student
+    // -- Make a map of which column belongs to which tag
+    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
+
+
+    // Find the first column that contains a criteria
+    const allCriteria = data.rubrics.flatMap((rubric) => rubric.criteria);
+    const colDataStart = Math.min(...allCriteria.map(criteria => tagColNumbers.get(criteria.tag) ?? 0)) + 1;
+
+    // -- FIND THE RIGHT STUDENT
     const studentsData = GetAllStudentsData(gradingOverviewSheet);
 
     let studentRowNum = studentsData.findIndex(student => student.id === userID);
@@ -364,8 +372,6 @@ export namespace PageGradingOverview {
     }
 
 
-    // -- Make a map of which column belongs to which tag
-    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
     // -- Go through all rubrics, insert checkmarks & grades
     data.rubrics.forEach(rubric => {
@@ -540,10 +546,12 @@ export namespace PageGradingOverview {
   ------------------------------------------------------------------------------*/
   //#region response doc gen
 
+  // TODO: CURRENT PROJECT
   export function GenerateResponseDocuments(
     rowBlocks: GoogleAppsScript.Spreadsheet.Range[],
     targetFolder: GoogleAppsScript.Drive.Folder,
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    responseTemplateSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
 
     // -- Make a map of which column belongs to which tag
@@ -570,6 +578,18 @@ export namespace PageGradingOverview {
 
         if (studentResponseSpreadsheet === undefined) return;
 
+        // Get the right sheet, if it exists
+        let sheet = PageResponse.GetOrCreateDetailsSheet(
+          studentResponseSpreadsheet,
+          responseTemplateSheet
+        );
+
+
+
+        // If it does not exist, copy template into it
+        // Then insert student grading data
+
+
         const newUrl = studentResponseSpreadsheet.getUrl();
         if (newUrl !== responseDocUrl) {
           let responseBlock = rowBlock.offset(
@@ -583,35 +603,6 @@ export namespace PageGradingOverview {
       }
 
     });
-
-
-
-    // For each range...
-    //    for each 
-
-
-    // Is the rowid/s a good data transfer method? "Get the students of these row ids"?
-    //   Start-row, num-rows so we get contiguous blocks for efficiency
-    //   Maybe make a method that's like "here have a row(array-values), make a Student object without rubrics"?
-    //    Could also be used by others
-
-    // So: loop through actual rows, make a student for each, create documents, 
-
-    // Find student and get its data (We only really need the basics, like name and id right?)
-    // Check if there's already a response doc
-    // Create response document w/ student's name as file name
-    //  Add it to folder
-    //   (Check if folder exists, otherwise create it)
-    // Set response column's value to document's url
-
-    // next step: 
-    //  Generate template sheet (which auto-gets values)
-    //  Copy template sheet to response doc
-    //  Insert student's ID into template sheet
-
-    // After that:
-    //  Make this work for multiple students
-
   }
 
   function GetOrCreateStudentResponseSpreadsheet(
@@ -622,26 +613,33 @@ export namespace PageGradingOverview {
 
     const responseSpreadsheetName = `Response ${student.surname} ${student.name}`;
 
-    let studentResponseSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
+    let studentResponseSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | undefined = undefined;
+    let studentResponseSpreadsheetFile: GoogleAppsScript.Drive.File | undefined = undefined;
 
     if (responseDocUrl !== "") {
       try {
         studentResponseSpreadsheet = SpreadsheetApp.openByUrl(responseDocUrl);
-        Browser.msgBox("Opened successfully");
+        studentResponseSpreadsheetFile = DriveApp.getFileById(studentResponseSpreadsheet.getId());
+
+        // Disregard if trashed
+        if (studentResponseSpreadsheetFile.isTrashed()) {
+          studentResponseSpreadsheet = undefined;
+          studentResponseSpreadsheetFile = undefined;
+        }
       }
       catch {
         const overwrite = Browser.msgBox(`Student "${student.name} ${student.surname} has something in the response doc column, but it doesn't seem to be the url of a Spreadsheet document\\nDo you want to overwrite this content?"`, Browser.Buttons.YES_NO);
         if (overwrite === "no") return undefined;
-        studentResponseSpreadsheet = SpreadsheetApp.create(responseSpreadsheetName);
       }
     }
-    else {
+
+    if (studentResponseSpreadsheet === undefined || studentResponseSpreadsheetFile === undefined) {
       studentResponseSpreadsheet = SpreadsheetApp.create(responseSpreadsheetName);
+      studentResponseSpreadsheetFile = DriveApp.getFileById(studentResponseSpreadsheet.getId());
     }
 
     // -- Set folder
-    const file = DriveApp.getFileById(studentResponseSpreadsheet.getId());
-    file.moveTo(targetFolder);
+    studentResponseSpreadsheetFile.moveTo(targetFolder);
 
     return studentResponseSpreadsheet;
   }

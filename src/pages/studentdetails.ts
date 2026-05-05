@@ -232,9 +232,6 @@ export namespace PageStudentDetails {
   ----------------------------------------------------------------------------*/
   //#region Transferring
 
-
-
-
   /**
    * Insert Student data from some other source, using criteria tags to match
    * with student detail sheet rows
@@ -260,6 +257,8 @@ export namespace PageStudentDetails {
     localData.values.forEach((row, rowNum) => {
       tagRowNumbers.set("" + row[setup.ColTag - 1], rowNum);
     });
+
+    // TODO: Do some checking here
 
     // Go through the rubrics, get grades from local data
     student.gradingData.rubrics.forEach(rubric => {

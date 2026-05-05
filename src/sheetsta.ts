@@ -297,14 +297,20 @@ function GenerateResponseDocForStudent() {
   const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
   const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
   const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
-  if (!gradingOverviewSheet || !rubricsSheet) return;
+  const responseTemplateSheet = PageResponse.GetDefaultResponseTemplateSheet(spreadsheet)
+  if (!gradingOverviewSheet || !rubricsSheet || !responseTemplateSheet) return;
 
   // PageGradingOverview.GetSelectedStudent(gradingOverviewSheet, rubricsSheet);
   const rowBlocks = LibGSheets.GetFullWidthBlocksOfSelection(gradingOverviewSheet);
 
   const targetFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
 
-  PageGradingOverview.GenerateResponseDocuments(rowBlocks, targetFolder, gradingOverviewSheet)
+  PageGradingOverview.GenerateResponseDocuments(
+    rowBlocks,
+    targetFolder,
+    gradingOverviewSheet,
+    responseTemplateSheet
+  )
 
   // ResponsePage.GenerateResponseDocument(
   //   gradingOverviewSheet,
