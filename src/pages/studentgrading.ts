@@ -1,6 +1,5 @@
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js"
-import { LibStudents } from "../libs/students.js";
 import { PageGradingOverview } from "./gradingoverview.js";
 import { PageRubrics } from "./rubrics.js";
 import { PageStudentDetails } from "./studentdetails.js";

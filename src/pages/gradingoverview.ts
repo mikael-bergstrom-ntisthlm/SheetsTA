@@ -41,6 +41,8 @@ export namespace PageGradingOverview {
     ) {
       // TODO: Add some sort of warning if there's already data
 
+      // TODO: Implement automatic adding of a filter
+
       const gradingOverviewSheet = LibGSheets.CreateOrGetSheet(
         _GradingOverviewSheetName,
         spreadsheet, true
@@ -93,13 +95,10 @@ export namespace PageGradingOverview {
 
       let rubrics = PageRubrics.GetRubrics(rubricsSheet);
 
-      let startColumn = gradingOverviewSheet.getFrozenColumns();
-      const totalWidthNeeded = GetTotalWidthNeeded(rubrics) + 4;
-
       // Get the range we need
       let rubricHeaderRange = gradingOverviewSheet.getRange(
-        _RowCriteriaActive, startColumn,
-        1, startColumn + totalWidthNeeded
+        _RowCriteriaActive, 1,
+        1, gradingOverviewSheet.getLastColumn()
       );
       let rubricHeaderRangeValues = rubricHeaderRange.getValues();
 
@@ -109,7 +108,6 @@ export namespace PageGradingOverview {
       // -- Go through all rubrics, insert checkmarks & grades
       rubrics.forEach(rubric => {
         rubric.criteria.forEach(criterion => {
-
           // Find the column with a matching tag
           const colNumber = tagColNumbers.get(criterion.tag);
           if (colNumber === undefined) {
@@ -343,7 +341,6 @@ export namespace PageGradingOverview {
     // -- Make a map of which column belongs to which tag
     const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
-
     // Find the first column that contains a criteria
     const allCriteria = data.rubrics.flatMap((rubric) => rubric.criteria);
     const colDataStart = Math.min(...allCriteria.map(criteria => tagColNumbers.get(criteria.tag) ?? 0)) + 1;
@@ -358,6 +355,9 @@ export namespace PageGradingOverview {
     const studentData = GetGradingDataRow(
       studentRowNum, colDataStart, gradingOverviewSheet
     );
+    
+
+    // -- INSERT DATA
 
     // -- Check if there are already values
     const numValues = studentData.values[0].filter(v => v.length != 0).length;
@@ -377,30 +377,33 @@ export namespace PageGradingOverview {
     data.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
-        // Find the column with a matching tag
-        let colNumber = tagColNumbers.get(criterion.tag);
-        if (colNumber === undefined) {
+        // Find the column with a matching tag (including data start offset)
+        let colNumber = (tagColNumbers.get(criterion.tag) ?? 0) - (colDataStart - 1);
+        if (colNumber < 0) {
           Browser.msgBox(`No column found for criterion '${criterion.name}'`);
           return;
         }
-
-        colNumber -= (colDataStart - 1);
 
         studentData.values[0][colNumber] = criterion.studentPassed ? "✔" : "✘";
       });
 
       // -- Set rubric grade
-      const colNumber = tagColNumbers.get(rubric.gradeTag);
-      if (colNumber === undefined) return;
+      let colNumber = (tagColNumbers.get(rubric.gradeTag) ?? 0) - (colDataStart - 1);
+      if (colNumber < 0) return;
+      
+      // colNumber -= (colDataStart - 1);
       studentData.values[0][colNumber] = rubric.studentGrade;
     });
 
-    let colNumber = tagColNumbers.get("comment"); // TODO: This tag is bad b/c someone might use it accidentally
-    if (colNumber === undefined) {
+    // -- Set comment
+
+    // Find the right column, including data start offset
+    let colNumber = (tagColNumbers.get("comment") ?? 0) - (colDataStart - 1); // TODO: This tag is bad b/c someone might use it accidentally
+    if (colNumber < 0) {
       Browser.msgBox("No column found for comment");
     }
     else {
-      colNumber -= (colDataStart - 1);
+      // colNumber -= (colDataStart - 1);
       studentData.values[0][colNumber] = data.comment;
     }
 
