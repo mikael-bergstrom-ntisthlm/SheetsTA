@@ -5,6 +5,7 @@ import { LibGSheets } from "../libs/sheets.js";
 import { LibStudents } from "../libs/students.js";
 import { PageResponse } from "./response.js";
 import { PageRubrics } from "./rubrics.js";
+import { PageStudentDetails } from "./studentdetails.js";
 
 export namespace PageGradingOverview {
 
@@ -355,7 +356,7 @@ export namespace PageGradingOverview {
     const studentData = GetGradingDataRow(
       studentRowNum, colDataStart, gradingOverviewSheet
     );
-    
+
 
     // -- INSERT DATA
 
@@ -390,7 +391,7 @@ export namespace PageGradingOverview {
       // -- Set rubric grade
       let colNumber = (tagColNumbers.get(rubric.gradeTag) ?? 0) - (colDataStart - 1);
       if (colNumber < 0) return;
-      
+
       // colNumber -= (colDataStart - 1);
       studentData.values[0][colNumber] = rubric.studentGrade;
     });
@@ -457,6 +458,7 @@ export namespace PageGradingOverview {
   /**
    * Takes a set of row-data and inserts it into a Student object, using a tag
    * map to determine which of the row's columns maps to which criterion
+   * The student needs to already have rubrics!
    * @param student {LibStudents.StudentData}
    * @param tagColNumbers {Map<string, number>}
    * @param studentDataValues {any[][]}
@@ -554,26 +556,47 @@ export namespace PageGradingOverview {
     rowBlocks: GoogleAppsScript.Spreadsheet.Range[],
     targetFolder: GoogleAppsScript.Drive.Folder,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    responseTemplateSheet: GoogleAppsScript.Spreadsheet.Sheet
+    responseTemplateSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
+
+    // -- PREPARE
+
+    // -- Get parent spreadsheet; for toasts
+    const spreadsheet = gradingOverviewSheet.getParent();
 
     // -- Make a map of which column belongs to which tag
     const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
+    // -- Make sure there's a column for the response doc URL
     const responseColNum = tagColNumbers.get(_ResponseDocTag);
     if (responseColNum === undefined) {
       Browser.msgBox(`No response document column found! \\nNeeds to have the tag ${_ResponseDocTag}`);
       return;
     }
+ 
+    const rubrics = PageRubrics.GetRubrics(rubricsSheet);
+
+    // -- PROCESS
 
     rowBlocks.forEach(rowBlock => {
       const rowBlockValues = rowBlock.getValues();
       const students = GetStudentsDataFromValues(rowBlockValues);
 
+      // -- Go through each student of the current block
       for (let i = 0; i < students.length; i++) {
 
+        // -- PREP STUDENT INCLUDING RUBRICS
         const student = students[i];
 
+        student.gradingData = {
+          comment: "",
+          rubrics: JSON.parse(JSON.stringify(rubrics))
+        }
+
+        InsertRowDataIntoStudent(student, tagColNumbers, rowBlockValues[i]);
+
+        // -- PREP DOCUMENT
         let responseDocUrl: string = rowBlockValues[i][responseColNum];
 
         let studentResponseSpreadsheet =
@@ -582,17 +605,21 @@ export namespace PageGradingOverview {
         if (studentResponseSpreadsheet === undefined) return;
 
         // Get the right sheet, if it exists
-        let sheet = PageResponse.GetOrCreateDetailsSheet(
+        let responseSheet = PageResponse.GetOrCreateDetailsSheet(
           studentResponseSpreadsheet,
           responseTemplateSheet
         );
 
+        // -- COMBINE STUDENT DATA WITH RESPONSE DOC
+        PageStudentDetails.InsertStudentDataRubrics(student, responseSheet, PageResponse.setup);
+
+        // TODO: Comments field & name!
+
+        const nameCell = responseSheet.getRange(PageResponse.setup.RowHeaderName, PageResponse.setup.ColHeaderData);
+        nameCell.setValue(`${student.name} ${student.surname}`);
 
 
-        // If it does not exist, copy template into it
-        // Then insert student grading data
-
-
+        // -- Insert new URL
         const newUrl = studentResponseSpreadsheet.getUrl();
         if (newUrl !== responseDocUrl) {
           let responseBlock = rowBlock.offset(
@@ -603,6 +630,8 @@ export namespace PageGradingOverview {
 
           responseBlock.setValue(newUrl)
         }
+
+        spreadsheet.toast(`Document for ${student.name} ${student.surname} updated`);
       }
 
     });

@@ -309,7 +309,8 @@ function GenerateResponseDocForStudent() {
     rowBlocks,
     targetFolder,
     gradingOverviewSheet,
-    responseTemplateSheet
+    responseTemplateSheet,
+    rubricsSheet
   )
 
   // ResponsePage.GenerateResponseDocument(

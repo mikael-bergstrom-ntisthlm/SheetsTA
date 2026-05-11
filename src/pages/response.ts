@@ -16,6 +16,7 @@ export namespace PageResponse {
     ColCheckmark: 4,
     ColGrade: -1,
     ColActive: 5,
+    ColHeaderData: 2,
     RowHeaderHeight: 4,
     RowHeaderName: 1,
     RowHeaderComment: 2,

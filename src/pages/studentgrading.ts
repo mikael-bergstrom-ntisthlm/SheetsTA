@@ -8,9 +8,6 @@ export namespace PageStudentGrading {
 
   const _StudentGradingSheetName = "STUDENTGRADE";
 
-  const _ColName: number = 2;
-  const _RowName: number = 1;
-
   // -- CONFIG
   export const setup: PageStudentDetails.SheetSetup = {
     ColRubric: 1,
@@ -19,6 +16,7 @@ export namespace PageStudentGrading {
     ColCheckmark: 4,
     ColGrade: 5,
     ColActive: 6,
+    ColHeaderData: 2,
     RowHeaderHeight: 3,
     RowHeaderName: 1,
     RowHeaderComment: -1,
@@ -102,7 +100,7 @@ export namespace PageStudentGrading {
    */
   export function GetSelectedUserId(studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet): string {
 
-    const nameCellValue: string = studentGradingSheet.getRange(_RowName, _ColName).getValue();
+    const nameCellValue: string = studentGradingSheet.getRange(setup.RowHeaderName, setup.ColHeaderData).getValue();
 
     if (nameCellValue == "") {
       SpreadsheetApp.getUi().alert("No selection!");

@@ -24,11 +24,13 @@ export namespace PageStudentDetails {
     if (setup.RowHeaderName > 0) {
 
       headerValues[setup.RowHeaderName - 1][0] = "Student name:";
-      targetSheet.getRange(setup.RowHeaderName, 2, 1, 3).merge();
+      targetSheet.getRange(
+        setup.RowHeaderName, setup.ColHeaderData,
+        1, 3).merge();
 
       if (studentNameIds.length > 0) {
         let rule = SpreadsheetApp.newDataValidation().requireValueInList(studentNameIds).build();
-        targetSheet.getRange(setup.RowHeaderName, 2)
+        targetSheet.getRange(setup.RowHeaderName, setup.ColHeaderData)
           .setDataValidation(rule);
       }
     }
@@ -391,6 +393,7 @@ export namespace PageStudentDetails {
     ColCheckmark: number;
     ColGrade: number;
     ColActive: number;
+    ColHeaderData: number;
     RowHeaderHeight: number;
     RowHeaderName: number;
     RowHeaderComment: number;
