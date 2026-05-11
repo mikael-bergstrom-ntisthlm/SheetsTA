@@ -305,10 +305,13 @@ function GenerateResponseDocForStudent() {
 
   const targetFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
 
-  PageGradingOverview.GenerateResponseDocuments(
+  const tagColNumbers = PageGradingOverview.MakeTagColNumberMap(gradingOverviewSheet);
+
+  PageResponse.GenerateResponseDocuments(
     rowBlocks,
+    tagColNumbers,
+    PageGradingOverview.studentColumnSetup,
     targetFolder,
-    gradingOverviewSheet,
     responseTemplateSheet,
     rubricsSheet
   )
