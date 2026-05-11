@@ -77,6 +77,7 @@ export namespace PageResponse {
       responseTemplate
         .setColumnWidth(setup.ColCriteria, 275);
     }
+
   }
 
   export function GetDefaultResponseTemplateSheet(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet):
@@ -102,12 +103,11 @@ export namespace PageResponse {
   }
 
 
-  /* -----------------------------------------------------------------------------
+/* -----------------------------------------------------------------------------
   RESPONSE DOCUMENT GENERATION
 ------------------------------------------------------------------------------*/
   //#region response doc gen
 
-  // TODO: CURRENT PROJECT
   /**
    * 
    * @param rowBlocks An array of Ranges; expected to already be full-width
@@ -251,10 +251,7 @@ export namespace PageResponse {
       studentResponseSpreadsheet = SpreadsheetApp.create(responseSpreadsheetName);
       studentResponseSpreadsheetFile = DriveApp.getFileById(studentResponseSpreadsheet.getId());
       studentResponseSpreadsheet.addViewer("krank23@gmail.com"); // TODO: Replace when not in testing
-
       // studentResponseSpreadsheet.addViewer(student.email);
-      // studentResponseSpreadsheetFile.addCommenter("krank23@gmail.com");
-      // studentResponseSpreadsheetFile.addCommenter(student.email);
     }
 
     // -- Set folder

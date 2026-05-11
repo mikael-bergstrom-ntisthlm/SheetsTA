@@ -12,10 +12,10 @@ export namespace PageGradingOverview {
 
   const _ColClassroomID = 1;
   const _ColCourseID = 2;
-  const _ColName = 3;
-  const _ColSurname = 4;
-  const _ColEmail = 5;
-  const _ColUserId = 6;
+  // const _ColName = 3;
+  // const _ColSurname = 4;
+  // const _ColEmail = 5;
+  // const _ColUserId = 6;
   const _ColFullName = 7;
   const _ColOutput = 8;
 
@@ -87,7 +87,7 @@ export namespace PageGradingOverview {
         gradingOverviewSheet.getMaxRows() - _RowDataStart
       );
 
-      fullNameRange.setFormula(`=${String.fromCharCode(64 + _ColSurname)}${_RowDataStart} & " " & ${String.fromCharCode(64 + _ColName)}${_RowDataStart}`);
+      fullNameRange.setFormula(`=${String.fromCharCode(64 + studentColumnSetup.colSurname)}${_RowDataStart} & " " & ${String.fromCharCode(64 + studentColumnSetup.colName)}${_RowDataStart}`);
 
       fullNameRange.setBackground("#d9d9d9");
     }
@@ -142,7 +142,7 @@ export namespace PageGradingOverview {
       let headerRange = gradingOverviewSheet.getRange(_RowTag, 1, 2, rosterHeaders.length);
       let headerRangeValues = headerRange.getValues();
 
-      // TODO: Use the consts for col-numbers (wtf did I mean by this?)
+      // 0 is the tag row, 1 is the human-readable header row
       headerRangeValues[0] = rosterHeaders.map(
         v => LibRubrics.GetSafeTagName(v)
       );
@@ -150,15 +150,15 @@ export namespace PageGradingOverview {
 
       headerRange.setValues(headerRangeValues);
 
-      gradingOverviewSheet.setColumnWidth(_ColName, 150);
-      gradingOverviewSheet.setColumnWidth(_ColSurname, 150);
+      gradingOverviewSheet.setColumnWidth(studentColumnSetup.colName, 150);
+      gradingOverviewSheet.setColumnWidth(studentColumnSetup.colSurname, 150);
       gradingOverviewSheet.setColumnWidth(_ColClassroomID, 150);
       gradingOverviewSheet.setColumnWidth(_ColFullName, 150);
       gradingOverviewSheet.setColumnWidth(_ColOutput, 50);
 
-      gradingOverviewSheet.hideColumns(_ColUserId);
+      gradingOverviewSheet.hideColumns(studentColumnSetup.colUserId);
       gradingOverviewSheet.hideColumns(_ColCourseID);
-      gradingOverviewSheet.hideColumns(_ColEmail);
+      gradingOverviewSheet.hideColumns(studentColumnSetup.colEmail);
     }
 
     function GetTotalWidthNeeded(rubrics: LibRubrics.Rubric[]): number {
@@ -438,42 +438,6 @@ export namespace PageGradingOverview {
     LibStudents.InsertRowDataIntoStudent(student, tagColNumbers, studentDataValues);
 
     return student;
-  }
-
-  // TODO: Determine if this is relevant
-  export function GetSelectedStudent(
-    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ) {
-    const studentDataValues = gradingOverviewSheet.getRange(
-      gradingOverviewSheet.getCurrentCell()?.getRow() ?? 0,
-      1,
-      1,
-      gradingOverviewSheet.getMaxColumns()
-    ).getValues()[0].map(v => String(v));
-
-    // -- Make a map of which column belongs to which tag
-    const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
-
-    // -- Make base student object
-    const student: LibStudents.StudentData = {
-      id: studentDataValues[_ColUserId - 1],
-      name: studentDataValues[_ColName - 1],
-      surname: studentDataValues[_ColSurname - 1],
-      email: studentDataValues[_ColEmail - 1],
-      gradingData: { // Wi
-        rubrics: [],
-        comment: ""
-      }
-    }
-
-    Browser.msgBox(student.name);
-
-    LibStudents.InsertRowDataIntoStudent(student, tagColNumbers, studentDataValues)
-
-    // Get current selection
-    // Get current row
-    // Create student object, return it
   }
 
   //#endregion

@@ -300,7 +300,6 @@ function GenerateResponseDocForStudent() {
   const responseTemplateSheet = PageResponse.GetDefaultResponseTemplateSheet(spreadsheet)
   if (!gradingOverviewSheet || !rubricsSheet || !responseTemplateSheet) return;
 
-  // PageGradingOverview.GetSelectedStudent(gradingOverviewSheet, rubricsSheet);
   const rowBlocks = LibGSheets.GetFullWidthBlocksOfSelection(gradingOverviewSheet);
 
   const targetFolder = DriveApp.getFileById(spreadsheet.getId()).getParents().next();
@@ -316,10 +315,6 @@ function GenerateResponseDocForStudent() {
     rubricsSheet
   )
 
-  // ResponsePage.GenerateResponseDocument(
-  //   gradingOverviewSheet,
-  //   "105003234631509491556"
-  // )
 }
 //#endregion
 

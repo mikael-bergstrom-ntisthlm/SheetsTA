@@ -260,7 +260,7 @@ export namespace PageStudentDetails {
       tagRowNumbers.set("" + row[setup.ColTag - 1], rowNum);
     });
 
-    // TODO: Do some checking here
+    // TODO: Do some checking here (What kind? What was I thinking?)
 
     // Go through the rubrics, get grades from local data
     student.gradingData.rubrics.forEach(rubric => {
