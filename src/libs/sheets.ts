@@ -70,6 +70,16 @@ export namespace LibGSheets {
     }
   }
 
+  export function TrimSheet(sheet: GoogleAppsScript.Spreadsheet.Sheet, margin: number) {
+    const lastCol = sheet.getLastColumn() + margin;
+    const lastRow = sheet.getLastRow() + margin;
+    const maxCol = sheet.getMaxColumns();
+    const maxRow = sheet.getMaxRows();
+
+    if (maxCol > lastCol) sheet.deleteColumns(lastCol, maxCol - lastCol);
+    else if (maxCol < lastCol) sheet.insertColumns(lastCol, lastCol - maxCol);
+    if (maxRow > lastRow) sheet.deleteRows(lastRow, maxRow - lastRow);
+  }
 
   /**
    * Add empty rows to a sheet

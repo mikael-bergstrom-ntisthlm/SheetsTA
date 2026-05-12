@@ -11,12 +11,12 @@ export namespace PageResponse {
   export const _ResponseDocTag = "responsedoc";
 
   // -- CONFIG
-  export const setup: PageStudentDetails.SheetSetup = {
+  export const setup: PageStudentDetails.StudentDetailsSetup = {
     ColRubric: 1,
     ColCriteria: 2,
     ColTag: 3,
     ColCheckmark: 4,
-    ColGrade: -1, // TODO: Make this *optional*
+    ColGrade: -1, // TODO: Make this *optional*; maybe always show it but hide if unwanted
     ColActive: 5,
     ColHeaderData: 2,
     RowHeaderHeight: 4,
@@ -44,14 +44,18 @@ export namespace PageResponse {
       return;
     }
 
-    LibGSheets.ClearSheet(responseTemplate);
-
-    // TODO: Crop unnecessary rows and columns
-
-    // -- GET DATA
-
     const rubrics = PageRubrics.GetRubrics(rubricsSheet);
 
+    // -- INIT PAGE
+
+    // Clear & set the initial size to "enough"
+    LibGSheets.ClearSheet(responseTemplate);
+    LibGSheets.SetSheetSize(responseTemplate,
+      PageStudentDetails.GetHighestColumnNumber(setup) * 2,
+      rubrics.flatMap(rubric => rubric.criteria).length * 2
+    );
+
+    // -- SETUP BLOCKS
     PageStudentDetails.SetupHeaderBlock(
       responseTemplate, [],
       setup
@@ -62,6 +66,20 @@ export namespace PageResponse {
       rubrics,
       setup
     )
+
+    // -- VISUALS
+
+    const checkmarkRange = responseTemplate.getRange(setup.RowHeaderHeight + 1, setup.ColCheckmark, responseTemplate.getLastRow() - setup.RowHeaderHeight);
+    const checkmarkGreenRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo("✔")
+      .setBackground('#00ff00')
+      .setRanges([checkmarkRange])
+      .build();
+
+    const rules = [checkmarkGreenRule];
+    responseTemplate.setConditionalFormatRules(rules);
+
+    // TODO: Red backgrounds for empty E-level criterias?
 
     // -- HIDE TAG COLUMN
     if (setup.ColTag > 0) {
@@ -77,6 +95,9 @@ export namespace PageResponse {
       responseTemplate
         .setColumnWidth(setup.ColCriteria, 275);
     }
+
+
+    LibGSheets.TrimSheet(responseTemplate, 1);
 
   }
 
@@ -103,9 +124,11 @@ export namespace PageResponse {
   }
 
 
-/* -----------------------------------------------------------------------------
-  RESPONSE DOCUMENT GENERATION
-------------------------------------------------------------------------------*/
+  // TODO: *read* rubric data from response document?
+
+  /* -----------------------------------------------------------------------------
+    RESPONSE DOCUMENT GENERATION
+  ------------------------------------------------------------------------------*/
   //#region response doc gen
 
   /**
@@ -130,9 +153,6 @@ export namespace PageResponse {
 
     // -- Get parent spreadsheet; for toasts
     const spreadsheet = responseTemplateSheet.getParent();
-
-    // -- Make a map of which column belongs to which tag
-    // const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
     // -- Make sure there's a column for the response doc URL
     const responseColNum = tagColNumbers.get(_ResponseDocTag);
@@ -164,6 +184,8 @@ export namespace PageResponse {
 
         // -- PREP DOCUMENT
         let responseDocUrl: string = rowBlockValues[i][responseColNum];
+
+        // TODO: It would be nice to be able to "force" a complete refresh of the target doc
 
         let studentResponseSpreadsheet =
           GetOrCreateStudentResponseSpreadsheet(student, responseDocUrl, targetFolder);

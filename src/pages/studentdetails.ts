@@ -3,14 +3,29 @@ import { LibGSheets } from "../libs/sheets.js";
 import { LibStudents } from "../libs/students.js";
 import { PageRubrics } from "./rubrics.js";
 
+/**
+ * *Student details* is a catchall for pages that present an individual student's
+ * data, with rubrics as vertically-stacked blocks.
+ */
 export namespace PageStudentDetails {
 
   const _EditBoxColor: string = "#D9EAD3";
 
+  /* ---------------------------------------------------------------------------
+    SETUP
+  ----------------------------------------------------------------------------*/
+  //#region Setup
+
+  /**
+   * Setup a Student Details header block in a specified Sheet.
+   * @param targetSheet The Sheet to add the block to
+   * @param students The students whose names and IDs to use as dropdown options for the Name header field. Use an empty [] to skip adding a dropdown.
+   * @param setup The setup config to use for things like what goes into what row/column
+   */
   export function SetupHeaderBlock(
     targetSheet: GoogleAppsScript.Spreadsheet.Sheet,
     students: LibStudents.StudentData[],
-    setup: SheetSetup
+    setup: StudentDetailsSetup
   ) {
     // -- PREP
     const studentNameIds: string[] = students
@@ -72,7 +87,7 @@ export namespace PageStudentDetails {
   export function SetupRubricsBlock(
     targetSheet: GoogleAppsScript.Spreadsheet.Sheet,
     rubrics: LibRubrics.Rubric[],
-    setup: PageStudentDetails.SheetSetup
+    setup: PageStudentDetails.StudentDetailsSetup
   ) {
 
     const rubricStartRow = setup.RowHeaderHeight + 1;
@@ -160,7 +175,7 @@ export namespace PageStudentDetails {
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
     criteria: LibRubrics.Criteria[],
     rubricBlockStartRow: number,
-    setup: SheetSetup
+    setup: StudentDetailsSetup
   ) {
 
     // Rubric label block
@@ -198,7 +213,7 @@ export namespace PageStudentDetails {
   function SetFilter(
     rubrics: LibRubrics.Rubric[],
     dataRange: GoogleAppsScript.Spreadsheet.Range,
-    setup: SheetSetup
+    setup: StudentDetailsSetup
   ) {
     // Count number of criteria
     const totalHeight =
@@ -217,8 +232,9 @@ export namespace PageStudentDetails {
     }
   }
 
+  //#endregion
 
-  export function GetHighestColumnNumber(setup: SheetSetup) {
+  export function GetHighestColumnNumber(setup: StudentDetailsSetup) {
     return Math.max(
       setup.ColActive,
       setup.ColCheckmark,
@@ -243,7 +259,7 @@ export namespace PageStudentDetails {
   export function InsertStudentDataRubrics(
     student: LibStudents.StudentData,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    setup: SheetSetup
+    setup: StudentDetailsSetup
   ): void {
 
     if (!student.gradingData) {
@@ -304,7 +320,7 @@ export namespace PageStudentDetails {
   export function GetStudentGradingData(
     rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    setup: SheetSetup
+    setup: StudentDetailsSetup
   ): LibStudents.GradingData {
 
     // Get rubrics from rubrics page
@@ -365,7 +381,7 @@ export namespace PageStudentDetails {
    */
   function GetRubricsData(
     studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    setup: SheetSetup
+    setup: StudentDetailsSetup
   ): LibGSheets.RangeValuePair {
 
     const gradingDataRange = studentGradingSheet
@@ -386,7 +402,7 @@ export namespace PageStudentDetails {
     INTERFACES
   ----------------------------------------------------------------------------*/
   //#region Interfaces
-  export interface SheetSetup {
+  export interface StudentDetailsSetup {
     ColRubric: number;
     ColCriteria: number;
     ColTag: number;

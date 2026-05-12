@@ -9,7 +9,7 @@ export namespace PageStudentGrading {
   const _StudentGradingSheetName = "STUDENTGRADE";
 
   // -- CONFIG
-  export const setup: PageStudentDetails.SheetSetup = {
+  export const setup: PageStudentDetails.StudentDetailsSetup = {
     ColRubric: 1,
     ColCriteria: 2,
     ColTag: 3,
