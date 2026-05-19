@@ -6,6 +6,8 @@ import { LibStudents } from "../libs/students.js";
 import { PageResponse } from "./response.js";
 import { PageRubrics } from "./rubrics.js";
 
+//TODO: Implement "Name of assignment"
+
 export namespace PageGradingOverview {
 
   const _GradingOverviewSheetName = "OVERVIEW";
@@ -308,6 +310,25 @@ export namespace PageGradingOverview {
   }
 
   
+  export function GetStudentDataRange(
+    userID: string,
+    colDataStart: number,
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ) : LibGSheets.RangeValuePair | undefined {
+
+    // -- FIND THE RIGHT STUDENT
+    const studentsData = GetAllStudentsData(gradingOverviewSheet);
+
+    let studentRowNum = studentsData.findIndex(student => student.id === userID);
+    if (studentRowNum < 0) { Browser.msgBox("Student ID not found"); return undefined; };
+
+    // -- Get the student's data
+    const studentData = GetGradingDataRow(
+      studentRowNum, colDataStart, gradingOverviewSheet
+    );
+
+    return studentData;
+  }
 
   /**
    * Insert rubric data for a specified user in the grading overview sheet
@@ -317,7 +338,7 @@ export namespace PageGradingOverview {
    * @returns 
    */
   export function InsertRubricData(
-    userID: string,
+    userID: string, // TODO: Extract get-student-range; replace this w/ target range?
     data: LibStudents.GradingData,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
@@ -328,20 +349,14 @@ export namespace PageGradingOverview {
     const tagColNumbers = MakeTagColNumberMap(gradingOverviewSheet);
 
     // Find the first column that contains a criteria
-    const allCriteria = data.rubrics.flatMap((rubric) => rubric.criteria);
-    const colDataStart = Math.min(...allCriteria.map(criteria => tagColNumbers.get(criteria.tag) ?? 0)) + 1;
+    //  Used b/ we don't want to destroy formulas of preeceding columns
+    //  TODO: Examine how we can avoid this
+
+    const colDataStart = GetFirstCriteriaColumnIndex(tagColNumbers, data) + 1;
 
     // -- FIND THE RIGHT STUDENT
-    const studentsData = GetAllStudentsData(gradingOverviewSheet);
-
-    let studentRowNum = studentsData.findIndex(student => student.id === userID);
-    if (studentRowNum < 0) { Browser.msgBox("Student ID not found"); return null; };
-
-    // -- Get the student's data
-    const studentData = GetGradingDataRow(
-      studentRowNum, colDataStart, gradingOverviewSheet
-    );
-
+    const studentData = GetStudentDataRange(userID, colDataStart, gradingOverviewSheet);
+    if (studentData === undefined) return;
 
     // -- INSERT DATA
 
@@ -356,7 +371,6 @@ export namespace PageGradingOverview {
         return;
       }
     }
-
 
 
     // -- Go through all rubrics, insert checkmarks & grades
@@ -377,7 +391,6 @@ export namespace PageGradingOverview {
       let colNumber = (tagColNumbers.get(rubric.gradeTag) ?? 0) - (colDataStart - 1);
       if (colNumber < 0) return;
 
-      // colNumber -= (colDataStart - 1);
       studentData.values[0][colNumber] = rubric.studentGrade;
     });
 
@@ -495,6 +508,15 @@ export namespace PageGradingOverview {
     });
 
     return tagColNumbers;
+  }
+
+
+  export function GetFirstCriteriaColumnIndex(
+    tagColNumbers: Map<string, number>,
+    gradingData: LibStudents.GradingData
+  ): number {
+    const allCriteria = gradingData.rubrics.flatMap((rubric) => rubric.criteria);
+    return Math.min(...allCriteria.map(criteria => tagColNumbers.get(criteria.tag) ?? 0));
   }
 
   //#endregion

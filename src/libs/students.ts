@@ -5,7 +5,7 @@ export namespace LibStudents {
   /**
    * Takes a set of row-data and inserts it into a Student object, using a tag
    * map to determine which of the row's columns maps to which criterion
-   * The student needs to already have rubrics!
+   * The student needs to already have rubrics! And the row-data needs to be full-width
    * @param student {LibStudents.StudentData}
    * @param tagColNumbers {Map<string, number>}
    * @param studentDataValues {any[][]}

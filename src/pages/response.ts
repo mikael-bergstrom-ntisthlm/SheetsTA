@@ -3,6 +3,8 @@ import { LibStudents } from "../libs/students.js";
 import { PageRubrics } from "./rubrics.js";
 import { PageStudentDetails } from "./studentdetails.js";
 
+// TODO: Adding classroom & assignment name to filenames of response docs
+
 export namespace PageResponse {
 
   const _ResponseTemplateSheetName = "_TEMPLATERESPONSE";
@@ -12,13 +14,13 @@ export namespace PageResponse {
 
   // -- CONFIG
   export const setup: PageStudentDetails.StudentDetailsSetup = {
-    ColRubric: 1,
-    ColCriteria: 2,
-    ColTag: 3,
-    ColCheckmark: 4,
-    ColGrade: -1, // TODO: Make this *optional*; maybe always show it but hide if unwanted
-    ColActive: 5,
-    ColHeaderData: 2,
+    ColRubric: 2,
+    ColCriteria: 3,
+    ColTag: 4,
+    ColGrade: 5, // TODO: Make this *optional*; maybe always show it but hide if unwanted
+    ColCheckmark: 6,
+    ColActive: 7,
+    ColHeaderData: 3,
     RowHeaderHeight: 4,
     RowHeaderName: 1,
     RowHeaderComment: 2,
@@ -86,7 +88,15 @@ export namespace PageResponse {
       responseTemplate.hideColumns(setup.ColTag);
     }
 
+    // -- HIDE GRADE COLUMN
+    if (setup.ColGrade) {
+      responseTemplate.hideColumns(setup.ColGrade)
+    }
+
     // -- SET WIDTHS
+
+    responseTemplate.setColumnWidth(1, 20); // TODO: Do this for student grading too
+
     if (setup.ColRubric > 0) {
       responseTemplate
         .setColumnWidth(setup.ColRubric, 223)
@@ -94,6 +104,10 @@ export namespace PageResponse {
     if (setup.ColCriteria > 0) {
       responseTemplate
         .setColumnWidth(setup.ColCriteria, 275);
+    }
+    if (setup.ColGrade > 0) {
+      responseTemplate
+        .setColumnWidth(setup.ColGrade, 70)
     }
 
 
@@ -140,7 +154,7 @@ export namespace PageResponse {
    * @param rubricsSheet The sheet containing rubric data
    * @returns 
    */
-  export function GenerateResponseDocuments(
+  export function GenerateOrUpdateResponseDocuments(
     rowBlocks: GoogleAppsScript.Spreadsheet.Range[],
     tagColNumbers: Map<string, number>,
     studentColumnSetup: LibStudents.StudentColumnSetup,
@@ -185,7 +199,7 @@ export namespace PageResponse {
         // -- PREP DOCUMENT
         let responseDocUrl: string = rowBlockValues[i][responseColNum];
 
-        // TODO: It would be nice to be able to "force" a complete refresh of the target doc
+        // TODO: It would be nice to be able to "force" a *complete* refresh of the target doc
 
         let studentResponseSpreadsheet =
           GetOrCreateStudentResponseSpreadsheet(student, responseDocUrl, targetFolder);
@@ -272,8 +286,8 @@ export namespace PageResponse {
     if (studentResponseSpreadsheet === undefined || studentResponseSpreadsheetFile === undefined) {
       studentResponseSpreadsheet = SpreadsheetApp.create(responseSpreadsheetName);
       studentResponseSpreadsheetFile = DriveApp.getFileById(studentResponseSpreadsheet.getId());
-      studentResponseSpreadsheet.addViewer("krank23@gmail.com"); // TODO: Replace when not in testing
-      // studentResponseSpreadsheet.addViewer(student.email);
+      // studentResponseSpreadsheet.addViewer("krank23@gmail.com"); // TODO: Replace when not in testing
+      studentResponseSpreadsheet.addViewer(student.email);
     }
 
     // -- Set folder

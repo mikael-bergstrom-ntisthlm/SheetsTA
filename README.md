@@ -13,6 +13,25 @@ This is a highly opinionated set of scripts and functions for Google Sheets, aim
 Maybe this process will be simplified or better explained later. Don't hold your breath.
 
 ## Usage (not done)
+- Setup
+  - Create master config
+    - Use "Get list of active classrooms to get a list of classroms.
+    - Choose one of the IDs and use "Get list of assignments" to get classroom-asignment pair
+  - Master config / Update roster
+  - Master config / Update submissions
+  - Create/add "_RUBRICS" page. First column rubric, second criteria, third grade, fourth true/false
+  - Setup grading overview sheet
+    - Add the students (copy-paste from _ROSTER)
+    - Add extra columns if you want them
+  - Setup student grading sheet
+  - Setup response document template
+- Use: Grading
+  - Update submissions
+  - STUDENTGRADE; select student. Grade the work.
+    - Transfer to grading overview & clear
+  - Response doc
+    - Select students, "generate/update response for student"
+---
 * Basics
   * Getting list of active classrooms
   * Get stuff from a classroom

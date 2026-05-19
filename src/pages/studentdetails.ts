@@ -38,7 +38,7 @@ export namespace PageStudentDetails {
     // Setup student name cells
     if (setup.RowHeaderName > 0) {
 
-      headerValues[setup.RowHeaderName - 1][0] = "Student name:";
+      headerValues[setup.RowHeaderName - 1][setup.ColRubric - 1] = "Student name:";
       targetSheet.getRange(
         setup.RowHeaderName, setup.ColHeaderData,
         1, 3).merge();
@@ -52,7 +52,7 @@ export namespace PageStudentDetails {
 
     // Setup comment row in header (if any)
     if (setup.RowHeaderComment > 0) {
-      headerValues[setup.RowHeaderComment - 1][0] = "Comment:";
+      headerValues[setup.RowHeaderComment - 1][setup.ColRubric - 1] = "Comment:";
       targetSheet.getRange(setup.RowHeaderComment, 2, 1, 3).merge();
     }
 
@@ -105,7 +105,7 @@ export namespace PageStudentDetails {
     rubrics.forEach(rubric => {
       let rubricBlockStartRow = rubricStartRow + row;
 
-      dataValues[row][0] = rubric.name;
+      dataValues[row][setup.ColRubric - 1] = rubric.name;
 
       // Insert rows from criteria
       rubric.criteria.forEach(criteria => {
@@ -254,11 +254,11 @@ export namespace PageStudentDetails {
    * Insert Student data from some other source, using criteria tags to match
    * with student detail sheet rows
    * @param student The student data to insert
-   * @param studentGradingSheet The sheet to insert it into
+   * @param targetDetailsSheet The sheet to insert it into
    */
   export function InsertStudentDataRubrics(
     student: LibStudents.StudentData,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    targetDetailsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     setup: StudentDetailsSetup
   ): void {
 
@@ -267,7 +267,7 @@ export namespace PageStudentDetails {
       return;
     }
 
-    const localData = GetRubricsData(studentGradingSheet, setup);
+    const localData = GetRubricsData(targetDetailsSheet, setup);
 
     // Setup quick index of tags and row numbers for easy lookup
     const tagRowNumbers = new Map<string, number>();
@@ -275,6 +275,7 @@ export namespace PageStudentDetails {
     localData.values.forEach((row, rowNum) => {
       tagRowNumbers.set("" + row[setup.ColTag - 1], rowNum);
     });
+    // Browser.msgBox("" + Array.from(tagRowNumbers.keys()));
 
     // TODO: Do some checking here (What kind? What was I thinking?)
 

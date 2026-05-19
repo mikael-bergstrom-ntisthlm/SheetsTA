@@ -20,6 +20,8 @@ function Setup() {
 
   const prefix: string = "SheetsTA2.";
 
+  // TODO: Restructure menus
+
   ui.createMenu("SheetsTA2")
     .addItem("Get list of active classrooms", `${prefix}GetClassrooms`)
     .addSubMenu(
@@ -248,13 +250,13 @@ function TransferFromStudentGradingToOverview() {
   const userId = PageStudentGrading.GetSelectedUserId(studentGradingSheet);
   if (userId === "") return;
 
-  const rubrics = PageStudentDetails.GetStudentGradingData(
+  const gradingData = PageStudentDetails.GetStudentGradingData(
     rubricsSheet,
     studentGradingSheet,
     PageStudentGrading.setup
   )
 
-  PageGradingOverview.InsertRubricData(userId, rubrics, gradingOverviewSheet);
+  PageGradingOverview.InsertRubricData(userId, gradingData, gradingOverviewSheet);
   PageStudentGrading.ClearGrading(studentGradingSheet);
 }
 
@@ -306,7 +308,7 @@ function GenerateResponseDocForStudent() {
 
   const tagColNumbers = PageGradingOverview.MakeTagColNumberMap(gradingOverviewSheet);
 
-  PageResponse.GenerateResponseDocuments(
+  PageResponse.GenerateOrUpdateResponseDocuments(
     rowBlocks,
     tagColNumbers,
     PageGradingOverview.studentColumnSetup,
@@ -316,6 +318,23 @@ function GenerateResponseDocForStudent() {
   )
 
 }
+
+function ReadStudentDataFromResponseDoc() {
+
+  // Get the selected blocks
+  
+  // Get the rubrics & comment from the response docs in those blocks
+  //  Possibly as an array of Student?
+  //  First get the basic student data from the block contents
+  //  Then for each student
+  //    get the response url
+  //  ↑ should be in Overview
+  //    then get the rubrics from that url, add to the gradingdata
+  //  ↑ should be in Response
+
+  // Insert the criteria & comments into the selected blocks
+}
+
 //#endregion
 
 /* -----------------------------------------------------------------------------

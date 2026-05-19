@@ -2,6 +2,8 @@ import { LibGClassroom } from "../libs/classroom.js";
 import { LibConfig } from "../libs/config.js";
 import { LibGSheets } from "../libs/sheets.js";
 
+//TODO: Get students from the roster (to, for instance, the overview)
+
 export namespace PageRoster {
 
   const rosterSheetName = "_ROSTER";
