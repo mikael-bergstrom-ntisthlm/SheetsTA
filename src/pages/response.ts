@@ -3,7 +3,7 @@ import { LibStudents } from "../libs/students.js";
 import { PageRubrics } from "./rubrics.js";
 import { PageStudentDetails } from "./studentdetails.js";
 
-// TODO: Adding classroom & assignment name to filenames of response docs
+// TODO: Adding classroom & assignment name to filenames of response docs / folder
 
 export namespace PageResponse {
 
@@ -137,9 +137,6 @@ export namespace PageResponse {
     return detailsSheet;
   }
 
-
-  // TODO: *read* rubric data from response document?
-
   /* -----------------------------------------------------------------------------
     RESPONSE DOCUMENT GENERATION
   ------------------------------------------------------------------------------*/
@@ -203,7 +200,6 @@ export namespace PageResponse {
 
         let studentResponseSpreadsheet =
           GetOrCreateStudentResponseSpreadsheet(student, responseDocUrl, targetFolder);
-
         if (studentResponseSpreadsheet === undefined) return;
 
         // Get the right sheet, if it exists
@@ -215,6 +211,7 @@ export namespace PageResponse {
         // -- COMBINE STUDENT DATA WITH RESPONSE DOC
         PageStudentDetails.InsertStudentDataRubrics(student, responseSheet, PageResponse.setup);
 
+        // TODO: Support for more (custom) fields; tied to tags
         // Name field
         responseSheet.getRange(PageResponse.setup.RowHeaderName, PageResponse.setup.ColHeaderData)
           .setValue(`${student.name} ${student.surname}`);
@@ -238,6 +235,83 @@ export namespace PageResponse {
 
         spreadsheet.toast(`Document for ${student.name} ${student.surname} updated`);
       }
+
+    });
+  }
+
+  export function ReadDataBackFromResponseDocs(
+    rowBlocks: GoogleAppsScript.Spreadsheet.Range[],
+    tagColNumbers: Map<string, number>, // of the rowBlocks
+    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ) {
+
+    // -- PREP
+
+    // -- Make sure there's a column for the response doc URL
+    const responseColNum = tagColNumbers.get(_ResponseDocTag);
+    if (responseColNum === undefined) {
+      Browser.msgBox(`No response document column found! \\nNeeds to have the tag ${_ResponseDocTag}`);
+      return;
+    }
+
+    const commentColNum = tagColNumbers.get("comment") ?? -1;
+
+    const rubrics = PageRubrics.GetRubrics(rubricsSheet);
+
+
+    // -- PROCESS
+
+    // -- Go through all blocks
+    rowBlocks.forEach(rowBlock => {
+
+      // Read current block's values
+      const rowBlockValues = rowBlock.getValues();
+
+      // Go through the block's rows
+      for (let rowNum = 0; rowNum < rowBlockValues.length; rowNum++) {
+
+        // -- Get the response spreadsheet/sheet
+        let studentResponseSpreadsheet: undefined | GoogleAppsScript.Spreadsheet.Spreadsheet = undefined;
+        const responseUrl = rowBlockValues[rowNum][responseColNum];
+
+        try {
+          studentResponseSpreadsheet = SpreadsheetApp.openByUrl(responseUrl);
+        } catch {
+          continue;
+        }
+
+        const responseSheet = studentResponseSpreadsheet.getSheetByName(_ResponseSheetDetailsName);
+        if (responseSheet === null) {
+          continue;
+        }
+
+        // -- Get the student grading data from the response sheet
+
+        const gradingData = PageStudentDetails.GetStudentGradingData(
+          rubrics,
+          responseSheet,
+          setup
+        );
+
+        // -- Insert the student grading data into the row
+
+        const allCriteria = gradingData.rubrics.flatMap((rubric) => rubric.criteria);
+
+        allCriteria.forEach(criterion => {
+          const colNum = tagColNumbers.get(criterion.tag);
+          if (colNum === undefined) return;
+
+          rowBlockValues[rowNum][colNum] = criterion.studentPassed ? "✔" : "✘";
+        });
+
+        // -- Insert the comment
+        if (commentColNum > 0) {
+          rowBlockValues[rowNum][commentColNum] = gradingData.comment;
+        }
+      }
+
+      // -- Write back the values into the block
+      rowBlock.setValues(rowBlockValues);
 
     });
   }
@@ -276,8 +350,7 @@ export namespace PageResponse {
           studentResponseSpreadsheet = undefined;
           studentResponseSpreadsheetFile = undefined;
         }
-      }
-      catch {
+      } catch {
         const overwrite = Browser.msgBox(`Student "${student.name} ${student.surname} has something in the response doc column, but it doesn't seem to be the url of a Spreadsheet document\\nDo you want to overwrite this content?"`, Browser.Buttons.YES_NO);
         if (overwrite === "no") return undefined;
       }
@@ -286,8 +359,11 @@ export namespace PageResponse {
     if (studentResponseSpreadsheet === undefined || studentResponseSpreadsheetFile === undefined) {
       studentResponseSpreadsheet = SpreadsheetApp.create(responseSpreadsheetName);
       studentResponseSpreadsheetFile = DriveApp.getFileById(studentResponseSpreadsheet.getId());
-      // studentResponseSpreadsheet.addViewer("krank23@gmail.com"); // TODO: Replace when not in testing
-      studentResponseSpreadsheet.addViewer(student.email);
+      try {
+        studentResponseSpreadsheet.addViewer(student.email);
+      } catch {
+        Browser.msgBox(`${student.email} is not a valid E-mail`);
+      }
     }
 
     // -- Set folder

@@ -7,6 +7,8 @@ import { PageResponse } from "./response.js";
 import { PageRubrics } from "./rubrics.js";
 
 //TODO: Implement "Name of assignment"
+//TODO: Implement auto-adding roster
+//TODO: Implement adding a filtered assignment column
 
 export namespace PageGradingOverview {
 
@@ -14,10 +16,6 @@ export namespace PageGradingOverview {
 
   const _ColClassroomID = 1;
   const _ColCourseID = 2;
-  // const _ColName = 3;
-  // const _ColSurname = 4;
-  // const _ColEmail = 5;
-  // const _ColUserId = 6;
   const _ColFullName = 7;
   const _ColOutput = 8;
 

@@ -22,6 +22,40 @@ function Setup() {
 
   // TODO: Restructure menus
 
+  /**
+   * - Tools
+   *   - Get list of classrooms
+   *   - Selected course ID
+   *     - Get roster
+   *     - Get list of assignments
+   *     - Get submissions
+   *   - Activity tracking
+   *     - Get document activity (weeks)
+   *     - Get document activity (dates)
+   *     - ----
+   *     - Get github repo activity (weeks)
+   *     - Get github repo activity (dates)
+   *   - Sanitize Github URLs
+   * - Setup
+   *   - Create config sheet
+   *   - ----
+   *   - Import rubrics sheet
+   *   - Create/update grading overview sheet
+   *   - Create/update single student grading sheet
+   *   - Create/update response document template
+   *   - ---- (Note: all ↓ should be as non-destructive as possible. Guardrails!)
+   *   - Overview: update rubrics
+   *   - Overview: update which criteria are active
+   *   - Overview: update roster
+   * - Grading
+   *   - Update submissions
+   *   - Grading: transfer to overview
+   *   - Grading: transfer from overview
+   *   - Response: Create/update student response
+   *   - Response: Read data from response doc
+   * - Response
+   */
+
   ui.createMenu("SheetsTA2")
     .addItem("Get list of active classrooms", `${prefix}GetClassrooms`)
     .addSubMenu(
@@ -61,6 +95,7 @@ function Setup() {
       SpreadsheetApp.getUi().createMenu("Grading responses")
         .addItem("Setup response document template", `${prefix}SetupResponseTemplate`)
         .addItem("Generate/Update response for student", `${prefix}GenerateResponseDocForStudent`)
+        .addItem("Read data back from selected student's response sheet", `${prefix}ReadStudentDataFromResponseDoc`)
     )
     .addSubMenu(
       SpreadsheetApp.getUi().createMenu("Utilities")
@@ -251,7 +286,7 @@ function TransferFromStudentGradingToOverview() {
   if (userId === "") return;
 
   const gradingData = PageStudentDetails.GetStudentGradingData(
-    rubricsSheet,
+    PageRubrics.GetRubrics(rubricsSheet),
     studentGradingSheet,
     PageStudentGrading.setup
   )
@@ -321,18 +356,20 @@ function GenerateResponseDocForStudent() {
 
 function ReadStudentDataFromResponseDoc() {
 
-  // Get the selected blocks
-  
-  // Get the rubrics & comment from the response docs in those blocks
-  //  Possibly as an array of Student?
-  //  First get the basic student data from the block contents
-  //  Then for each student
-  //    get the response url
-  //  ↑ should be in Overview
-  //    then get the rubrics from that url, add to the gradingdata
-  //  ↑ should be in Response
+  const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
+  const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
+  const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
+  if (!gradingOverviewSheet || !rubricsSheet) return;
 
-  // Insert the criteria & comments into the selected blocks
+  const rowBlocks = LibGSheets.GetFullWidthBlocksOfSelection(gradingOverviewSheet);
+
+  const tagColNumbers = PageGradingOverview.MakeTagColNumberMap(gradingOverviewSheet);
+
+  PageResponse.ReadDataBackFromResponseDocs(
+    rowBlocks,
+    tagColNumbers,
+    rubricsSheet
+  )
 }
 
 //#endregion

@@ -41,7 +41,7 @@ export namespace PageStudentDetails {
       headerValues[setup.RowHeaderName - 1][setup.ColRubric - 1] = "Student name:";
       targetSheet.getRange(
         setup.RowHeaderName, setup.ColHeaderData,
-        1, 3).merge();
+        1, 4).merge();
 
       if (studentNameIds.length > 0) {
         let rule = SpreadsheetApp.newDataValidation().requireValueInList(studentNameIds).build();
@@ -53,7 +53,9 @@ export namespace PageStudentDetails {
     // Setup comment row in header (if any)
     if (setup.RowHeaderComment > 0) {
       headerValues[setup.RowHeaderComment - 1][setup.ColRubric - 1] = "Comment:";
-      targetSheet.getRange(setup.RowHeaderComment, 2, 1, 3).merge();
+      targetSheet.getRange(
+        setup.RowHeaderComment, setup.ColHeaderData,
+        1, 4).merge();
     }
 
     // Setup data headers
@@ -319,21 +321,21 @@ export namespace PageStudentDetails {
   }
 
   export function GetStudentGradingData(
-    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    studentGradingSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    rubrics: LibRubrics.Rubric[],
+    studentDetailsSheet: GoogleAppsScript.Spreadsheet.Sheet,
     setup: StudentDetailsSetup
   ): LibStudents.GradingData {
 
     // Get rubrics from rubrics page
     const data: LibStudents.GradingData = {
-      rubrics: PageRubrics.GetRubrics(rubricsSheet),
+      rubrics: JSON.parse(JSON.stringify(rubrics)),
       comment: ""
     }
 
     if (data.rubrics.length == 0) { Browser.msgBox("No rubrics found") }
 
     // Get the local values
-    const localData = GetRubricsData(studentGradingSheet, setup);
+    const localData = GetRubricsData(studentDetailsSheet, setup);
 
     // Setup quick index of tags and row numbers for easy lookup
     const tagRowNumbers = new Map<string, number>();
@@ -365,9 +367,11 @@ export namespace PageStudentDetails {
     });
 
     // -- Get the comment
-    const rowNum = tagRowNumbers.get("comment");
-    if (rowNum) {
-      data.comment = localData.values[rowNum][setup.ColCheckmark - 1];
+    if (setup.RowHeaderComment >= 0) {
+      data.comment = studentDetailsSheet.getRange(
+        setup.RowHeaderComment,
+        setup.ColHeaderData,
+      ).getValue();
     }
 
     // Return the data
