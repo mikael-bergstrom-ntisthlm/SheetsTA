@@ -1,3 +1,4 @@
+import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js";
 import { LibStudents } from "../libs/students.js";
 import { PageRubrics } from "./rubrics.js";
@@ -295,7 +296,7 @@ export namespace PageResponse {
 
         // -- Insert the student grading data into the row
 
-        const allCriteria = gradingData.rubrics.flatMap((rubric) => rubric.criteria);
+        const allCriteria = LibRubrics.GetAllCriteria(gradingData.rubrics);
 
         allCriteria.forEach(criterion => {
           const colNum = tagColNumbers.get(criterion.tag);

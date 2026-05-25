@@ -7,8 +7,7 @@ import { PageResponse } from "./response.js";
 import { PageRubrics } from "./rubrics.js";
 
 //TODO: Implement "Name of assignment"
-//TODO: Implement auto-adding roster
-//TODO: Implement adding a filtered assignment column
+//TODO: Implement adding a filtered assignment/submissions column
 
 export namespace PageGradingOverview {
 
@@ -45,40 +44,49 @@ export namespace PageGradingOverview {
       config: LibConfig.Config
     ) {
       // TODO: Add some sort of warning if there's already data
-
       // TODO: Implement automatic adding of a filter
+      // TODO: Implement auto-adding roster
 
       const gradingOverviewSheet = LibGSheets.CreateOrGetSheet(
         _GradingOverviewSheetName,
         spreadsheet, true
       );
 
+      // -- PREP
+
       LibGSheets.ClearSheet(gradingOverviewSheet);
 
       const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
       if (!rubricsSheet) return;
 
-      // Get rubrics from _RUBRICS
+      // Get rubrics
       let rubrics = PageRubrics.GetRubrics(rubricsSheet);
 
-      // Initialize some values
+      // -- SETUP
 
-
+      // -- Width
       let totalWidth = LibGClassroom.rosterHeaders.length + 2
-        + GetTotalWidthNeeded(rubrics) + 4;
+        + LibRubrics.GetTotalSizeNeeded(rubrics) + 4;
 
       LibGSheets.SetSheetWidth(gradingOverviewSheet, totalWidth);
 
-      // Setup headers
+      // -- Setup headers
+
+      // Top-left quadrant
       SetupRosterHeader(gradingOverviewSheet);
+
+      // Top-right quadrant
       let startColumn = gradingOverviewSheet.getLastColumn() + 1;
       SetupRubricHeader(gradingOverviewSheet, startColumn, rubrics);
 
-      // Setup data areas
-      SetupRosterArea(gradingOverviewSheet);
-
       // -- Set overall visuals
       FormatHeader(gradingOverviewSheet);
+
+      // -- Setup data areas
+
+      // Bottom-left area
+      SetupRosterArea(gradingOverviewSheet);
+
     }
 
     function SetupRosterArea(gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
@@ -161,17 +169,15 @@ export namespace PageGradingOverview {
       gradingOverviewSheet.hideColumns(studentColumnSetup.colEmail);
     }
 
-    function GetTotalWidthNeeded(rubrics: LibRubrics.Rubric[]): number {
-      return LibRubrics.CountCriteria(rubrics) + rubrics.length * 2;
-    }
+
 
     function SetupRubricHeader(
       gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
       startColumn: number,
       rubrics: LibRubrics.Rubric[]) {
-      // Get the range we need
 
-      const totalWidthNeeded = GetTotalWidthNeeded(rubrics) + 4;
+      // -- Get the range we need
+      const totalWidthNeeded = LibRubrics.GetTotalSizeNeeded(rubrics) + 4;
 
       const rubricHeaderRange = gradingOverviewSheet.getRange(
         1, startColumn,
@@ -181,7 +187,7 @@ export namespace PageGradingOverview {
 
       let currentCol = 0;
 
-      // Go through the rubrics
+      // -- Go through the rubrics
       rubrics.forEach(rubric => {
 
         FormatRubricSingleHeader(gradingOverviewSheet, startColumn + currentCol, rubric);
@@ -307,12 +313,12 @@ export namespace PageGradingOverview {
     return LibStudents.GetStudentsDataFromValues(studentsRange.getValues(), studentColumnSetup);
   }
 
-  
+
   export function GetStudentDataRange(
     userID: string,
     colDataStart: number,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
-  ) : LibGSheets.RangeValuePair | undefined {
+  ): LibGSheets.RangeValuePair | undefined {
 
     // -- FIND THE RIGHT STUDENT
     const studentsData = GetAllStudentsData(gradingOverviewSheet);
@@ -336,7 +342,7 @@ export namespace PageGradingOverview {
    * @returns 
    */
   export function InsertRubricData(
-    userID: string, // TODO: Extract get-student-range; replace this w/ target range?
+    userID: string,
     data: LibStudents.GradingData,
     gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
   ) {
@@ -359,54 +365,63 @@ export namespace PageGradingOverview {
     // -- INSERT DATA
 
     // -- Check if there are already values
-    const numValues = studentData.values[0].filter(v => v.length != 0).length;
-    if (numValues > 0) {
-      const answer = Browser.msgBox(
-        "Values already exist for that student. Overwrite?",
-        Browser.Buttons.YES_NO
-      );
-      if (answer == "no") {
-        return;
-      }
-    }
+    if (!CheckOverwriteContents(studentData.values[0])) return;
 
+    InsertGradingDataIntoValuesRow(data, studentData.values[0], tagColNumbers, colDataStart);
 
+    // -- Re-insert values
+    studentData.range.setValues(studentData.values);
+  }
+
+  /**
+   * Takes some grading data and inserts the results (studentPassed mapped to 
+   * "✔"/"✘") into an array (valuesRow).
+   * Uses a map of tags-to-column-numbers to determine which index in the array 
+   * each grading criterion result should be inserted into.
+   * @param gradingData 
+   * @param valuesRow 
+   * @param tagColNumbers 
+   * @param columnOffset 
+   */
+  export function InsertGradingDataIntoValuesRow(
+    gradingData: LibStudents.GradingData,
+    valuesRow: any[],
+    tagColNumbers: Map<string, number>,
+    columnOffset: number
+  ) {
     // -- Go through all rubrics, insert checkmarks & grades
-    data.rubrics.forEach(rubric => {
+    gradingData.rubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
 
         // Find the column with a matching tag (including data start offset)
-        let colNumber = (tagColNumbers.get(criterion.tag) ?? 0) - (colDataStart - 1);
+        let colNumber = (tagColNumbers.get(criterion.tag) ?? 0) - (columnOffset - 1);
         if (colNumber < 0) {
           Browser.msgBox(`No column found for criterion '${criterion.name}'`);
           return;
         }
 
-        studentData.values[0][colNumber] = criterion.studentPassed ? "✔" : "✘";
+        valuesRow[colNumber] = criterion.studentPassed ? "✔" : "✘";
       });
 
       // -- Set rubric grade
-      let colNumber = (tagColNumbers.get(rubric.gradeTag) ?? 0) - (colDataStart - 1);
+      let colNumber = (tagColNumbers.get(rubric.gradeTag) ?? 0) - (columnOffset - 1);
       if (colNumber < 0) return;
 
-      studentData.values[0][colNumber] = rubric.studentGrade;
+      valuesRow[colNumber] = rubric.studentGrade;
     });
 
     // -- Set comment
 
     // Find the right column, including data start offset
-    let colNumber = (tagColNumbers.get("comment") ?? 0) - (colDataStart - 1); // TODO: This tag is bad b/c someone might use it accidentally
+    let colNumber = (tagColNumbers.get("comment") ?? 0) - (columnOffset - 1); // TODO: This tag is bad b/c someone might use it accidentally
     if (colNumber < 0) {
       Browser.msgBox("No column found for comment");
     }
     else {
-      // colNumber -= (colDataStart - 1);
-      studentData.values[0][colNumber] = data.comment;
+      valuesRow[colNumber] = gradingData.comment;
     }
-
-    // -- Re-insert values
-    studentData.range.setValues(studentData.values);
   }
+
 
   /**
    * Get the details of a single user from the overview sheet, including rubrics
@@ -513,8 +528,32 @@ export namespace PageGradingOverview {
     tagColNumbers: Map<string, number>,
     gradingData: LibStudents.GradingData
   ): number {
-    const allCriteria = gradingData.rubrics.flatMap((rubric) => rubric.criteria);
+    const allCriteria = LibRubrics.GetAllCriteria(gradingData.rubrics);
     return Math.min(...allCriteria.map(criteria => tagColNumbers.get(criteria.tag) ?? 0));
+  }
+
+  /**
+   * Check if we should go ahead with overwriting the row's contents.
+   * returns true if it's empty or if the user allows overwriting the
+   * already existing contents
+   * @param dataRow 
+   * @returns 
+   */
+  function CheckOverwriteContents(
+    dataRow: any[]
+  ): boolean {
+
+    const numValues = dataRow.filter(v => v.length != 0).length;
+    if (numValues > 0) {
+      const answer = Browser.msgBox(
+        "Values already exist. Overwrite?",
+        Browser.Buttons.YES_NO
+      );
+      if (answer == "no") {
+        return false;
+      }
+    }
+    return true;
   }
 
   //#endregion

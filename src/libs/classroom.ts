@@ -5,6 +5,7 @@ export namespace LibGClassroom {
 
   export const rosterHeaders:string[] = ["Classroom", "CourseID", "Name", "Surname", "Email", "UserID"];
 
+  // TODO: refactor so instead it gives an array of classroom objects
   /**
    * Creates a list of active classrooms the current user has access to
    * @returns {string[][]} A two-dimensional array; an array of rows containing classroom data. First row is headers. Each row (inner array) will contain) columns: Course name, CourseID
@@ -106,6 +107,7 @@ export namespace LibGClassroom {
     return rosterValues;
   }
 
+  // TODO: Refactor to return an array of assignment objects instead
   /**
    * Creates a list of assignments by combining assignment lists from 1+ Google Classrooms
    * @param {Config} config - The config object to use; will contain info on what classrooms to get assignments from
@@ -140,6 +142,7 @@ export namespace LibGClassroom {
   }
 
 
+  // TODO: Refactor to return an array of submission objects instead
   /**
    * Creates a list of student submission attachments by combining such attachments from 1+ Google Classroom assignments
    * @param {Config} config - The config object to use; will contain info on what classrooms & assignments to get submissions from
@@ -199,7 +202,7 @@ export namespace LibGClassroom {
   }
 
   /**
-   * Check the type of a Google Classroom assignment attachment
+   * Get the type of a Google Classroom assignment attachment as a string
    * @param {GoogleAppsScript.Classroom.Schema.Attachment} attachment - The attachment to check
    * @returns {string} - A string describing the attachment's type
    */
