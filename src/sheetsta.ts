@@ -87,6 +87,7 @@ function Setup() {
         .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
         .addItem("Setup response document template", `${prefix}SetupResponseTemplate`)
         .addSeparator()
+        .addItem("Add roster to grading overview sheet", `${prefix}AddRosterToOverviewSheet`)
         .addItem("Update active criteria in overview sheet", `${prefix}UpdateGradingOverviewActiveFromTemplate`)
     )
     .addSeparator()
@@ -252,6 +253,15 @@ function SetupGradingOverviewSheet() {
   if (!config || !spreadsheet) return;
 
   PageGradingOverview.Setup.Setup(spreadsheet, config);
+}
+
+function AddRosterToOverviewSheet() {
+  const spreadsheet = SpreadsheetApp.getActive();
+  const gradingOverviewSheet = PageGradingOverview.GetDefaultGradingOverviewSheet(spreadsheet);
+  const config = PageMasterConfig.GetMasterConfig(spreadsheet)
+  if (!config || !gradingOverviewSheet) return;
+
+  PageGradingOverview.AddRoster(config, gradingOverviewSheet);
 }
 
 function UpdateGradingOverviewActiveFromTemplate() {

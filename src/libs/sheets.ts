@@ -129,12 +129,19 @@ export namespace LibGSheets {
   /**
    * Completely clear a sheet of contents, formatting, frozen columns/rows etc
    * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet
+   * @param {boolean} preserveBelowTheFold whether to preserve data below the frozen row
    */
-  export function ClearSheet(sheet: GoogleAppsScript.Spreadsheet.Sheet) {
+  export function ClearSheet(sheet: GoogleAppsScript.Spreadsheet.Sheet, preserveBelowTheFold: boolean = false) {
     const height = sheet.getMaxRows();
     const width = sheet.getMaxColumns();
 
-    sheet.clear();
+    if (preserveBelowTheFold) {
+      sheet.getRange(1, 1, sheet.getFrozenRows(), sheet.getMaxColumns()).clear();
+      sheet.clearFormats();
+    } else {
+      sheet.clear();
+    }
+
     sheet.getFilter()?.remove();
     sheet.setFrozenRows(0);
     sheet.setFrozenColumns(0);

@@ -6,7 +6,12 @@ import { LibStudents } from "../libs/students.js";
 import { PageResponse } from "./response.js";
 import { PageRubrics } from "./rubrics.js";
 
-//TODO: Implement adding a filtered assignment/submissions column
+// TODO: Implement adding a filtered assignment/submissions column
+// TODO: Implement adding roster
+//          warning if there are already ppl (Add only new / cancel / add all regardless?)
+//          offer to auto-add on setup, if there are no ppl
+// TODO: Implement automatic adding of a filter (when roster is updated/added)
+
 
 export namespace PageGradingOverview {
 
@@ -50,18 +55,18 @@ export namespace PageGradingOverview {
       spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
       config: LibConfig.Config
     ) {
-      // TODO: Add some sort of warning if there's already data
-      // TODO: Implement automatic adding of a filter
-      // TODO: Implement auto-adding roster
+      // TODO: Add some sort of warning if there's already (grading) data
+      //          remove existing grading data
+
 
       const gradingOverviewSheet = LibGSheets.CreateOrGetSheet(
         _GradingOverviewSheetName,
-        spreadsheet, true
+        spreadsheet, false
       );
 
       // -- PREP
 
-      LibGSheets.ClearSheet(gradingOverviewSheet);
+      LibGSheets.ClearSheet(gradingOverviewSheet, true);
 
       const rubricsSheet = PageRubrics.GetDefaultRubricsSheet(spreadsheet);
       if (!rubricsSheet) return;
@@ -191,7 +196,6 @@ export namespace PageGradingOverview {
 
     }
 
-
     function SetupRubricHeader(
       gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet,
       startColumn: number,
@@ -304,6 +308,12 @@ export namespace PageGradingOverview {
         .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
       tagRange.setFontStyle("italic");
     }
+  }
+
+  export function AddRoster(config: LibConfig.Config, gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+    const rosterValues = LibGClassroom.GetRoster(config);
+    rosterValues.shift(); // Remove headers
+    LibGSheets.InsertValuesAt(rosterValues, gradingOverviewSheet.getRange(_RowDataStart, 1));
   }
 
   export function UpdateActiveCriteriaToTemplate() {
