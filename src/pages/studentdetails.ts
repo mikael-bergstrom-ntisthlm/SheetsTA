@@ -1,6 +1,7 @@
 import { LibRubrics } from "../libs/rubrics.js";
 import { LibGSheets } from "../libs/sheets.js";
 import { LibStudents } from "../libs/students.js";
+import { LibUtils } from "../libs/utils.js";
 import { PageRubrics } from "./rubrics.js";
 
 /**
@@ -27,6 +28,7 @@ export namespace PageStudentDetails {
     students: LibStudents.StudentData[],
     setup: StudentDetailsSetup
   ) {
+
     // -- PREP
     const studentNameIds: string[] = students
       .map(student => student.name + " " + student.surname + " | " + student.id);
@@ -95,11 +97,14 @@ export namespace PageStudentDetails {
     const rubricStartRow = setup.RowHeaderHeight + 1;
     const width = PageStudentDetails.GetHighestColumnNumber(setup);
 
+    const startColumn = Math.min(...LibUtils.GetArrayOfFilteredObjectPropertyValues(setup, "Col"));
+    
     const dataRange = targetSheet.getRange(
-      rubricStartRow, 1,
+      rubricStartRow, startColumn,
       targetSheet.getMaxRows() - setup.RowHeaderHeight,
       width);
     const dataValues = dataRange.getValues();
+
 
     // -- RUBRICS ROWS
     let row = 0;
@@ -107,29 +112,29 @@ export namespace PageStudentDetails {
     rubrics.forEach(rubric => {
       let rubricBlockStartRow = rubricStartRow + row;
 
-      dataValues[row][setup.ColRubric - 1] = rubric.name;
+      dataValues[row][setup.ColRubric - startColumn] = rubric.name;
 
       // Insert rows from criteria
       rubric.criteria.forEach(criteria => {
         if (setup.ColCriteria > 0)
-          dataValues[row][setup.ColCriteria - 1] = criteria.name;
+          dataValues[row][setup.ColCriteria - startColumn] = criteria.name;
         if (setup.ColTag > 0)
-          dataValues[row][setup.ColTag - 1] = criteria.tag;
+          dataValues[row][setup.ColTag - startColumn] = criteria.tag;
         if (setup.ColCheckmark > 0)
-          dataValues[row][setup.ColCheckmark - 1] = "✘";
+          dataValues[row][setup.ColCheckmark - startColumn] = "✘";
         if (setup.ColGrade > 0)
-          dataValues[row][setup.ColGrade - 1] = criteria.grade;
+          dataValues[row][setup.ColGrade - startColumn] = criteria.grade;
         if (setup.ColActive > 0)
-          dataValues[row][setup.ColActive - 1] = criteria.active;
+          dataValues[row][setup.ColActive - startColumn] = criteria.active;
         row++;
       });
 
       // "Grade" on its own row
       if (setup.GradeForEachRubric) {
 
-        dataValues[row][setup.ColCriteria - 1] = "Grade";
-        dataValues[row][setup.ColTag - 1] = rubric.gradeTag;
-        dataValues[row][setup.ColActive - 1] = true;
+        dataValues[row][setup.ColCriteria - startColumn] = "Grade";
+        dataValues[row][setup.ColTag - startColumn] = rubric.gradeTag;
+        dataValues[row][setup.ColActive - startColumn] = true;
         row += 2;
 
       } else {
@@ -144,13 +149,17 @@ export namespace PageStudentDetails {
     // -- COMMENT ROW
     if (setup.CommentFooter) {
 
-      dataValues[row + 1][setup.ColCriteria - 1] = "Comment";
-      dataValues[row + 1][setup.ColTag - 1] = "comment";
+      dataValues[row + 1][setup.ColCriteria - startColumn] = "Comment";
+      dataValues[row + 1][setup.ColTag - startColumn] = "comment";
 
-      dataRange.offset(row + 1, setup.ColCriteria - 1, 1, 1)
+      dataRange.offset(row + 1, setup.ColCriteria - startColumn, 1, 1)
         .setHorizontalAlignment("right")
         .setFontWeight("bold")
-        .offset(0, 2, 1, 3) // get writing box
+        .offset(0,
+          2, // 2 cols to the right
+          1,
+          3 // width
+        ) // get writing box
         // TODO: Four magic numbers; not ideal
         .setBackground(_EditBoxColor)
         .merge();
@@ -193,6 +202,9 @@ export namespace PageStudentDetails {
       .setHorizontalAlignment("center")
       .insertCheckboxes("✔", "✘");
 
+    studentGradingSheet.getRange(rubricBlockStartRow, setup.ColGrade, criteria.length, 1)
+      .setHorizontalAlignment("center");
+    
     // Grade sub-block
     if (setup.GradeForEachRubric) {
 
@@ -223,10 +235,14 @@ export namespace PageStudentDetails {
       + rubrics.length * (setup.GradeForEachRubric ? 2 : 1);
     // Add (maybe) 1 for the grade and 1 for spacing, for each rubric
 
-    // Create filter range
-    let filterRange = dataRange.offset(-1, 0, totalHeight);
-    let filter = filterRange.createFilter();
+    const firstColumn = Math.min(...LibUtils.GetArrayOfFilteredObjectPropertyValues(setup, "Col"));
+    const lastColumn = Math.max(...LibUtils.GetArrayOfFilteredObjectPropertyValues(setup, "Col"));
+    const totalWidth = lastColumn - firstColumn + 1;
 
+    // Create filter range
+    let filterRange = dataRange.offset(-1, 0, totalHeight, totalWidth);
+    let filter = filterRange.createFilter();
+    
     // Hide inactive criteria, maybe
     if (setup.ColActive > 0) {
       const criteria = SpreadsheetApp.newFilterCriteria().setHiddenValues(["FALSE"]);

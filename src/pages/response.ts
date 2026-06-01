@@ -158,7 +158,8 @@ export namespace PageResponse {
     studentColumnSetup: LibStudents.StudentColumnSetup,
     targetFolder: GoogleAppsScript.Drive.Folder,
     responseTemplateSheet: GoogleAppsScript.Spreadsheet.Sheet,
-    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet
+    rubricsSheet: GoogleAppsScript.Spreadsheet.Sheet,
+    assignmentName: string
   ) {
 
     // -- PREPARE
@@ -199,8 +200,9 @@ export namespace PageResponse {
 
         // TODO: It would be nice to be able to "force" a *complete* refresh of the target doc
 
+
         let studentResponseSpreadsheet =
-          GetOrCreateStudentResponseSpreadsheet(student, responseDocUrl, targetFolder);
+          GetOrCreateStudentResponseSpreadsheet(student, assignmentName, responseDocUrl, targetFolder);
         if (studentResponseSpreadsheet === undefined) return;
 
         // Get the right sheet, if it exists
@@ -296,6 +298,8 @@ export namespace PageResponse {
 
         // -- Insert the student grading data into the row
 
+        //TODO: Use InsertGradingDataIntoValuesRow instead?
+
         const allCriteria = LibRubrics.GetAllCriteria(gradingData.rubrics);
 
         allCriteria.forEach(criterion => {
@@ -332,11 +336,12 @@ export namespace PageResponse {
    */
   function GetOrCreateStudentResponseSpreadsheet(
     student: LibStudents.StudentData,
+    assignmentName: string,
     responseDocUrl: string,
     targetFolder: GoogleAppsScript.Drive.Folder
   ): GoogleAppsScript.Spreadsheet.Spreadsheet | undefined {
 
-    const responseSpreadsheetName = `Response ${student.surname} ${student.name}`;
+    const responseSpreadsheetName = `Response for ${assignmentName}: ${student.surname} ${student.name}`;
 
     let studentResponseSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | undefined = undefined;
     let studentResponseSpreadsheetFile: GoogleAppsScript.Drive.File | undefined = undefined;

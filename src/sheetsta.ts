@@ -57,51 +57,46 @@ function Setup() {
    */
 
   ui.createMenu("SheetsTA2")
-    .addItem("Get list of active classrooms", `${prefix}GetClassrooms`)
     .addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Selected course ID")
-        .addItem("Get roster from Classroom", `${prefix}GetRoster`)
-        .addItem("Get list of assignments", `${prefix}GetAssignments`)
-        .addItem("Get student submissions", `${prefix}GetStudentSubmissions`)
-    )
-    .addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Activity tracking")
-        .addItem("Get document activity (weeks)", `${prefix}GetDocActivityWeeks`)
-        .addItem("Get document activity (dates)", `${prefix}GetDocActivityDates`)
-        .addSeparator()
-        .addItem("Get github repo activity (weeks)", `${prefix}GetGithubRepoActivityWeeks`)
-        .addItem("Get github repo activity (dates)", `${prefix}GetGithubRepoActivityDates`)
-    )
-    .addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Master config")
-        .addItem("Create master config", `${prefix}MasterConfigCreate`)
-        .addItem("Update roster", `${prefix}UpdateRoster`)
-        .addItem("Update submissions", `${prefix}UpdateSubmissions`)
-        .addItem("Update all", `${prefix}UpdateAll`)
-    )
-    .addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Overview sheet")
-        .addItem("Setup grading overview sheet", `${prefix}SetupGradingOverviewSheet`)
-        .addItem("Update active criteria in overview sheet", `${prefix}UpdateGradingOverviewActiveFromTemplate`)
-    )
-    .addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Grading sheets")
-        .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
-        .addItem("Clear student grading sheet", `${prefix}ClearStudentGradingSheet`)
-        .addSeparator()
-        .addItem("Transfer to grading overview & clear", `${prefix}TransferFromStudentGradingToOverview`)
-        .addItem("Transfer from master grading sheet", `${prefix}TransferFromOverviewToStudentGrading`)
-    ).addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Grading responses")
-        .addItem("Setup response document template", `${prefix}SetupResponseTemplate`)
-        .addItem("Generate/Update response for student", `${prefix}GenerateResponseDocForStudent`)
-        .addItem("Read data back from selected student's response sheet", `${prefix}ReadStudentDataFromResponseDoc`)
-    )
-    .addSubMenu(
-      SpreadsheetApp.getUi().createMenu("Utilities")
+      SpreadsheetApp.getUi().createMenu("Tools")
+        .addItem("Get list of active classrooms", `${prefix}GetClassrooms`)
+        .addSubMenu(
+          SpreadsheetApp.getUi().createMenu("Selected course ID")
+            .addItem("Get roster from Classroom", `${prefix}GetRoster`)
+            .addItem("Get list of assignments", `${prefix}GetAssignments`)
+            .addItem("Get student submissions", `${prefix}GetStudentSubmissions`)
+        )
+        .addSubMenu(
+          SpreadsheetApp.getUi().createMenu("Activity tracking")
+            .addItem("Get document activity (weeks)", `${prefix}GetDocActivityWeeks`)
+            .addItem("Get document activity (dates)", `${prefix}GetDocActivityDates`)
+            .addSeparator()
+            .addItem("Get github repo activity (weeks)", `${prefix}GetGithubRepoActivityWeeks`)
+            .addItem("Get github repo activity (dates)", `${prefix}GetGithubRepoActivityDates`)
+        )
         .addItem("Sanitize Github URLs", "SheetsTA2.SanitizeGithubURLs")
     )
-
+    .addSubMenu(
+      SpreadsheetApp.getUi().createMenu("Setup")
+        .addItem("Create master config", `${prefix}MasterConfigCreate`)
+        .addSeparator()
+        .addItem("Update roster", `${prefix}UpdateRoster`)
+        .addItem("Update submissions", `${prefix}UpdateSubmissions`)
+        .addSeparator()
+        .addItem("Setup grading overview sheet", `${prefix}SetupGradingOverviewSheet`)
+        .addItem("Setup student grading sheet", `${prefix}SetupStudentGradingSheet`)
+        .addItem("Setup response document template", `${prefix}SetupResponseTemplate`)
+        .addSeparator()
+        .addItem("Update active criteria in overview sheet", `${prefix}UpdateGradingOverviewActiveFromTemplate`)
+    )
+    .addSeparator()
+    .addItem("Student grading: Clear", `${prefix}ClearStudentGradingSheet`)
+    .addSeparator()
+    .addItem("Student grade: Transfer to grading overview & clear", `${prefix}TransferFromStudentGradingToOverview`)
+    .addItem("Student grade: Transfer from master grading sheet", `${prefix}TransferFromOverviewToStudentGrading`)
+    .addSeparator()
+    .addItem("Generate/Update response for student", `${prefix}GenerateResponseDocForStudent`)
+    .addItem("Read data back from selected student's response sheet", `${prefix}ReadStudentDataFromResponseDoc`)
     .addToUi();
   Logger.log("Inited");
 }
@@ -343,13 +338,16 @@ function GenerateResponseDocForStudent() {
 
   const tagColNumbers = PageGradingOverview.MakeTagColNumberMap(gradingOverviewSheet);
 
+  const assignmentName = PageGradingOverview.GetAssignmentName(gradingOverviewSheet);
+
   PageResponse.GenerateOrUpdateResponseDocuments(
     rowBlocks,
     tagColNumbers,
     PageGradingOverview.studentColumnSetup,
     targetFolder,
     responseTemplateSheet,
-    rubricsSheet
+    rubricsSheet,
+    assignmentName
   )
 
 }

@@ -6,18 +6,21 @@ import { LibStudents } from "../libs/students.js";
 import { PageResponse } from "./response.js";
 import { PageRubrics } from "./rubrics.js";
 
-//TODO: Implement "Name of assignment"
 //TODO: Implement adding a filtered assignment/submissions column
 
 export namespace PageGradingOverview {
 
   const _GradingOverviewSheetName = "OVERVIEW";
 
+  const _ColAssignmentName = 1;
   const _ColClassroomID = 1;
   const _ColCourseID = 2;
   const _ColFullName = 7;
   const _ColOutput = 8;
 
+  const _ColSpanAssignmentName = 4;
+
+  const _RowAssignmentName = 1;
   const _RowRubricTitle = 1;
   const _RowCriteriaActive = 2;
   const _RowGrade = 3;
@@ -38,6 +41,10 @@ export namespace PageGradingOverview {
     return spreadsheet.getSheetByName(_GradingOverviewSheetName);
   }
 
+  /* ---------------------------------------------------------------------------
+    SETUP
+  ----------------------------------------------------------------------------*/
+  //#region Setup
   export namespace Setup {
     export function Setup(
       spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet,
@@ -74,6 +81,7 @@ export namespace PageGradingOverview {
 
       // Top-left quadrant
       SetupRosterHeader(gradingOverviewSheet);
+      SetupAssignmentName("[Assignment name]", gradingOverviewSheet);
 
       // Top-right quadrant
       let startColumn = gradingOverviewSheet.getLastColumn() + 1;
@@ -169,6 +177,19 @@ export namespace PageGradingOverview {
       gradingOverviewSheet.hideColumns(studentColumnSetup.colEmail);
     }
 
+    function SetupAssignmentName(assignmentName: string, gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet) {
+
+      gradingOverviewSheet.getRange(
+        _RowAssignmentName, _ColAssignmentName,
+        _RowTag - _RowAssignmentName,
+        Math.min(gradingOverviewSheet.getFrozenColumns(), _ColSpanAssignmentName)
+      ).merge()
+        .setFontSize(24)
+        .setFontWeight("bold")
+        .setVerticalAlignment("top")
+        .setValue(assignmentName);
+
+    }
 
 
     function SetupRubricHeader(
@@ -288,6 +309,8 @@ export namespace PageGradingOverview {
   export function UpdateActiveCriteriaToTemplate() {
     // TODO: Implement
   }
+
+  //#endregion
 
   /* ---------------------------------------------------------------------------
     TRANSFERRING DATA
@@ -422,7 +445,6 @@ export namespace PageGradingOverview {
     }
   }
 
-
   /**
    * Get the details of a single user from the overview sheet, including rubrics
    * @param userID 
@@ -464,6 +486,12 @@ export namespace PageGradingOverview {
     LibStudents.InsertRowDataIntoStudent(student, tagColNumbers, studentDataValues);
 
     return student;
+  }
+
+  export function GetAssignmentName(
+    gradingOverviewSheet: GoogleAppsScript.Spreadsheet.Sheet
+  ) {
+    return String(gradingOverviewSheet.getRange(1, 1).getValue());
   }
 
   //#endregion

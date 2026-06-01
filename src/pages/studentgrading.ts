@@ -10,13 +10,13 @@ export namespace PageStudentGrading {
 
   // -- CONFIG
   export const setup: PageStudentDetails.StudentDetailsSetup = {
-    ColRubric: 1,
-    ColCriteria: 2,
-    ColTag: 3,
-    ColCheckmark: 4,
-    ColGrade: 5,
-    ColActive: 6,
-    ColHeaderData: 2,
+    ColRubric: 2,
+    ColCriteria: 3,
+    ColTag: 4,
+    ColCheckmark: 5,
+    ColGrade: 6,
+    ColActive: 7,
+    ColHeaderData: 3,
     RowHeaderHeight: 3,
     RowHeaderName: 1,
     RowHeaderComment: -1,
@@ -80,6 +80,7 @@ export namespace PageStudentGrading {
         .setColumnWidth(setup.ColCriteria, 275)
         .setColumnWidth(setup.ColGrade, 70)
         .setColumnWidth(setup.ColActive, 70)
+        .setColumnWidth(1, 20);
       studentGradingSheet
         .hideColumns(setup.ColTag);
 
